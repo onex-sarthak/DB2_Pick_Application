@@ -1,0 +1,7 @@
+package org.example.db2_pick_app.config;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class AppConfig {
+}
