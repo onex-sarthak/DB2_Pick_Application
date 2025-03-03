@@ -1,5 +1,4 @@
 package org.example.db2_pick_app.service;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
@@ -11,14 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import static org.example.db2_pick_app.Db2PickAppApplication.logger;
 
 @Service
@@ -32,9 +29,6 @@ public class MessageService {
     private CPaaSIntegrationService cPaaSIntegrationService;
 
     private ScheduledThreadPoolExecutor scheduler;
-
-    // Flag to prevent multiple threads from polling simultaneously
-    private final AtomicBoolean isPolling = new AtomicBoolean(false);
 
     // Track when no messages were found
     private volatile boolean noMessagesFound = false;
@@ -52,7 +46,6 @@ public class MessageService {
     @PostConstruct
     public void startScheduler() {
         scheduler = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(threadPoolCoreSize);
-//        scheduler.scheduleAtFixedRate(this::pollAndProcessMessages, 0, pollingIntervalSeconds, TimeUnit.SECONDS);
 
         for (int i = 0; i < threadPoolCoreSize; i++) {
             final int theadId = i;
@@ -87,25 +80,19 @@ public class MessageService {
     }
 
     public void coordinatedPollAndProcessMessages(int threadId) {
-//         If another thread is already polling, skip this run
-//        if (isPolling.compareAndSet(false, true)) {
-//            logger.info("Thread {} skipping poll - another thread is already polling", threadId);
-//            return;
-//        }
-
 
         try{
             long currentTime = System.currentTimeMillis();
-            if(noMessagesFound && threadId != 0) {
+            if(noMessagesFound && (currentTime - lastEmptyPollTime) < pollingIntervalSeconds * 1000) {
                 logger.info("Thread {} skipping poll - no messages found in recent poll within last {} seconds",
                         threadId, pollingIntervalSeconds);
                 return;
             }
             logger.info("Thread {} checking for messages", threadId);
             pollAndProcessMessages();
-        }finally {
-                isPolling.set(false);
-            }
+        }catch(Exception e) {
+            logger.error("Error occurred while polling for messages", e);
+        }
     }
 
     @Transactional
