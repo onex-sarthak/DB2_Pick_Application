@@ -124,7 +124,6 @@ public class MessageService {
                 logger.error("Failed to process messages", e);
             }
 
-
         } catch (Exception e) {
             logger.error("Error during message batch processing", e);
         }
