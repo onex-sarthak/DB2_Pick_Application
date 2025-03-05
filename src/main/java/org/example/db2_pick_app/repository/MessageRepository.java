@@ -47,4 +47,5 @@ public interface MessageRepository extends JpaRepository<MessageInfo, String> {
 //    List <MessageInfo> fetchPendingMessagesBatch(@Param("BATCH_SIZE") Integer batchSize);
 
 
+    List<MessageInfo> findAllByRecipientMobileIn(List<String> recipientMobileNumbers);
 }
