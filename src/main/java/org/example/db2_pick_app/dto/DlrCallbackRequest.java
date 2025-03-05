@@ -10,5 +10,5 @@ import lombok.Setter;
 public class DlrCallbackRequest {
     private String recipientMobileNumber;
     private String dlrStatus;
-    private String timestamp;
+    private String dlrErrorCode;
 }
