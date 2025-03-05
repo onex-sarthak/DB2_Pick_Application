@@ -1,6 +1,5 @@
 package org.example.db2_pick_app.controller;
 
-import org.example.db2_pick_app.repository.MessageRepository;
 import org.example.db2_pick_app.service.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

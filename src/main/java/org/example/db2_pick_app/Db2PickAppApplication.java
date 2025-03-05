@@ -15,13 +15,6 @@ public class Db2PickAppApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(Db2PickAppApplication.class, args);
-
-
-        logger.info("info message");
-        logger.warn("warn message");
-        logger.error("error message");
-
-
     }
 
 
