@@ -2,6 +2,7 @@ package org.example.db2_pick_app.service;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
 import org.example.db2_pick_app.model.MessageInfo;
 import org.example.db2_pick_app.repository.MessageRepository;
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@AllArgsConstructor
 public class MessageService {
     private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
 
@@ -144,10 +146,12 @@ public class MessageService {
             }
         }
     }
+
     @Transactional
     public void updateStatusFlagsToZero(List<String> ids) {
         messageRepository.updateMessageStatusBatch(String.join(",", ids),0);
     }
+
 
     public void coordinatedPollAndProcessMessages(int threadId) {
 
