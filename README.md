@@ -1,5 +1,5 @@
 # DB2_Pick_Application
-A application to pick data from a db2 database and call aura v1 bulk messaging apis and update the database.
+An application to pick data from a db2 database, which calls aura v1 bulk messaging apis and updates the database.
 
 
 
