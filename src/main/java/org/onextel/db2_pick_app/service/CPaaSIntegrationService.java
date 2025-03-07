@@ -1,8 +1,8 @@
-package org.example.db2_pick_app.service;
+package org.onextel.db2_pick_app.service;
 
-import org.example.db2_pick_app.dto.SmsRequest;
-import org.example.db2_pick_app.model.MessageInfo;
-import org.example.db2_pick_app.repository.MessageRepository;
+import org.onextel.db2_pick_app.dto.SmsRequest;
+import org.onextel.db2_pick_app.model.MessageInfo;
+import org.onextel.db2_pick_app.repository.MessageRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +51,7 @@ public class CPaaSIntegrationService {
                             message.getMessageContent(),
                             message.getUniqueId()
                     ))
-                    .collect(Collectors.toList());
+                    .toList();
 
             //Create the request body
             SmsRequest requestBody = new SmsRequest("sCYmf0y9", smsRequests);
@@ -71,7 +71,6 @@ public class CPaaSIntegrationService {
 
             return messageIdString;
         } catch (Exception e) {
-            logger.error("Failed to process message batch: {}", e.getMessage());
             throw new RuntimeException("Message batch processing failed", e);
         }
     }

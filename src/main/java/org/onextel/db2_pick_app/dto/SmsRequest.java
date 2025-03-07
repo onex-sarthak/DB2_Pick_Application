@@ -1,4 +1,4 @@
-package org.example.db2_pick_app.dto;
+package org.onextel.db2_pick_app.dto;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import lombok.*;
@@ -7,8 +7,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Data
-@Setter
-@Getter
+
 @AllArgsConstructor
 @NoArgsConstructor
 public class SmsRequest {
