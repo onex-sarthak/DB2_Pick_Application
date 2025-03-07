@@ -1,4 +1,4 @@
-package org.onextel.db2_pick_app.dto;
+package com.onextel.db2_pick_app.dto;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import lombok.*;

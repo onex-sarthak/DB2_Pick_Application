@@ -1,4 +1,4 @@
-package org.onextel.db2_pick_app;
+package com.onextel.db2_pick_app;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

@@ -1,4 +1,4 @@
-package org.onextel.db2_pick_app.model;
+package com.onextel.db2_pick_app.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

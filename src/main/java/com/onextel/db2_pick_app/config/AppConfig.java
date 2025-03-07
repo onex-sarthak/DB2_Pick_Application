@@ -1,4 +1,4 @@
-package org.onextel.db2_pick_app.config;
+package com.onextel.db2_pick_app.config;
 
 import org.springframework.stereotype.Component;
 
