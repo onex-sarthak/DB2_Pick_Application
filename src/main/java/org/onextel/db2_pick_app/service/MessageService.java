@@ -1,15 +1,14 @@
-package org.example.db2_pick_app.service;
+package org.onextel.db2_pick_app.service;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import org.example.db2_pick_app.model.MessageInfo;
-import org.example.db2_pick_app.repository.MessageRepository;
+import org.onextel.db2_pick_app.model.MessageInfo;
+import org.onextel.db2_pick_app.repository.MessageRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 

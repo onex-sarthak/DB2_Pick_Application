@@ -1,11 +1,9 @@
-package org.example.db2_pick_app.repository;
+package org.onextel.db2_pick_app.repository;
 
-import org.example.db2_pick_app.model.MessageInfo;
-import org.springframework.context.annotation.DependsOn;
+import org.onextel.db2_pick_app.model.MessageInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;

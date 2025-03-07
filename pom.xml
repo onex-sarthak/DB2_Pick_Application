@@ -8,7 +8,7 @@
         <version>3.4.3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>org.example</groupId>
+    <groupId>org.onextel</groupId>
     <artifactId>DB2_Pick_App</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>DB2_Pick_App</name>
