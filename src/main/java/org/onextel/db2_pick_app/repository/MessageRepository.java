@@ -15,7 +15,6 @@ import java.util.List;
 public interface MessageRepository extends JpaRepository<MessageInfo, String> {
 
     @Transactional
-////    @Procedure(name = "SCH.FETCH_PENDING_MESSAGES")
     @Query(value = "CALL SMS_SCHEMA.FETCH_PENDING_MESSAGES(:BATCH_SIZE);", nativeQuery = true)
     List<MessageInfo> fetchPendingMessagesBatch(@Param("BATCH_SIZE") int batch_size);
 
@@ -27,22 +26,12 @@ public interface MessageRepository extends JpaRepository<MessageInfo, String> {
     void updateStatusFlags(List<String> ids);
 
 
-//    @Procedure(name = "Sch.UPDATE_MESSAGE_STATUS_BATCH")
+
     @Modifying
     @Transactional
     @Query(value = "CALL SMS_SCHEMA.UPDATE_MESSAGE_STATUS_BATCH(:UNIQUE_IDS , :NEW_STATUS);", nativeQuery = true)
     void updateMessageStatusBatch(@Param("UNIQUE_IDS") String uniqueIds,
                                   @Param("NEW_STATUS") Integer newStatus);
-//
-//    @Modifying
-//    @Transactional
-//    @Procedure(name = "updateMessageStatusBatch")
-//    void updateMessageStatusBatch(@Param("UNIQUE_IDS") String uniqueIds,@Param("NEW_STATUS") String newStatus);
-
-
-//    @Transactional
-//    @Procedure(name="FETCH_PENDING_MESSAGES")
-//    List <MessageInfo> fetchPendingMessagesBatch(@Param("BATCH_SIZE") Integer batchSize);
 
 
     List<MessageInfo> findAllByRecipientMobileIn(List<String> recipientMobileNumbers);

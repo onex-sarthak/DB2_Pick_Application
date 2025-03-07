@@ -1,5 +1,6 @@
 package org.onextel.db2_pick_app.controller;
 
+import lombok.AllArgsConstructor;
 import org.onextel.db2_pick_app.dto.DlrCallbackRequest;
 import org.onextel.db2_pick_app.service.DlrCallbackService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,13 +14,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/dlr")
+@AllArgsConstructor
 public class DLRController {
-    DlrCallbackService dlrCallbackService;
 
-    @Autowired
-    public DLRController(DlrCallbackService dlrCallbackService) {
-        this.dlrCallbackService = dlrCallbackService;
-    }
+    DlrCallbackService dlrCallbackService;
 
     @PostMapping("/callback")
     public ResponseEntity<String> callback(@RequestBody List<DlrCallbackRequest> dlrCallbackRequests) {
@@ -27,6 +25,4 @@ public class DLRController {
         System.out.println("DLR Callbacks Processed Successfully");
         return ResponseEntity.ok("Status updated successfully for the following dlrCallbackRequests : "+ dlrCallbackRequests.toString());
     }
-
-
 }

@@ -10,22 +10,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "MESSAGE_INFO", schema = "SMS_SCHEMA")
-
-//@NamedStoredProcedureQuery(
-//        name = "updateMessageStatusBatch",
-//        procedureName = "SMS_SCHEMA.UPDATE_MESSAGE_STATUS_BATCH",
-//        parameters = {
-//                @StoredProcedureParameter(mode = ParameterMode.IN, name="UNIQUE_IDS", type = String.class),
-//                @StoredProcedureParameter(mode = ParameterMode.IN, name="NEW_STATUS", type = Integer.class)
-//        }
-//)
-//@NamedStoredProcedureQuery(
-//        name = "fetchPendingMessages",
-//        procedureName = "SMS_SCHEMA.FETCH_PENDING_MESSAGES",
-//        parameters = {
-//                @StoredProcedureParameter(mode = ParameterMode.IN,name="BATCH_SIZE", type = Integer.class)
-//        }
-//)
 @Getter
 @Setter
 public class MessageInfo {

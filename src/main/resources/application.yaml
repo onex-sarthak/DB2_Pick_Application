@@ -1,0 +1,46 @@
+apikey: sCYmf0y9
+batch:
+  processing:
+    enabled: true
+db:
+  poll:
+    batch:
+      size: 100
+    thread:
+      pool:
+        size: 2
+message:
+  batch:
+    size: 2
+  polling:
+    interval: 10
+server:
+  port: 8082
+spring:
+  application:
+    name: DB2_Pick_App
+  datasource:
+    driver-class-name: com.ibm.db2.jcc.DB2Driver
+    password: Sarthak@51
+    url: jdbc:db2://localhost:50012/SAMPLE
+    username: db2inst2
+  jpa:
+    database-platform: org.hibernate.dialect.DB2Dialect
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+    show-sql: true
+thread:
+  pool:
+    core:
+      size: 3
+    max:
+      size: 3
+    queue:
+      capacity: 100

@@ -7,8 +7,6 @@ import lombok.Setter;
 import java.util.List;
 
 @Data
-@Setter
-@Getter
 public class SmsResponse {
     private SmsList smslist;
 

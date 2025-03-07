@@ -7,8 +7,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Data
-@Setter
-@Getter
+
 @AllArgsConstructor
 @NoArgsConstructor
 public class SmsRequest {
