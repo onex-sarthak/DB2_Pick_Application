@@ -5,6 +5,7 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import com.onextel.db2_pick_app.model.MessageInfo;
 import com.onextel.db2_pick_app.repository.MessageRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,44 +14,261 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class MessageService {
-    private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
 
-    @Autowired
-    private MessageRepository messageRepository;
+    private final MessageRepository messageRepository;
+    private final CPaaSIntegrationService cPaaSIntegrationService;
+    private final JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private CPaaSIntegrationService cPaaSIntegrationService;
+    // Thread pools
+    private ScheduledExecutorService producerExecutor;
+    private ExecutorService consumerExecutor;
 
-    private ScheduledThreadPoolExecutor scheduler;
+    // Message queue
+    private final BlockingQueue<List<MessageInfo>> messageQueue = new LinkedBlockingQueue<>();
 
-    // Track when no messages were found
+    // Semaphore to control consumer thread availability
+    private final Semaphore consumerSemaphore;
+
+    // Flags for coordination
+    private final AtomicBoolean isProcessing = new AtomicBoolean(false);
     private volatile boolean noMessagesFound = false;
     private volatile long lastEmptyPollTime = 0;
 
-    @Value("${thread.pool.core.size:2}")
-    private int threadPoolCoreSize;
+    // Configuration
+    @Value("${consumer.thread.pool.size:5}")
+    private int consumerThreadPoolSize;
 
     @Value("${message.polling.interval:120}")
     private int pollingIntervalSeconds;
 
-    @Value("${message.batch.size:2}")
+    @Value("${message.batch.size:100}")
     private int batchSize;
 
-    private final JdbcTemplate jdbcTemplate;
+    @Value("${api.call.batch.size:20}")
+    private int apiCallBatchSize;
 
     @Autowired
-    public MessageService(JdbcTemplate jdbcTemplate) {
+    public MessageService(
+            MessageRepository messageRepository,
+            CPaaSIntegrationService cPaaSIntegrationService,
+            JdbcTemplate jdbcTemplate) {
+        this.messageRepository = messageRepository;
+        this.cPaaSIntegrationService = cPaaSIntegrationService;
         this.jdbcTemplate = jdbcTemplate;
+        this.consumerSemaphore = new Semaphore(consumerThreadPoolSize); // Initially no permits
     }
 
+    @PostConstruct
+    public void initialize() {
+        // Create stored procedures
+        createStoredProcedures();
 
+        // Initialize thread pools
+        producerExecutor = Executors.newScheduledThreadPool(1,
+                r -> {
+                    Thread t = new Thread(r, "db-poller");
+//                    t.setDaemon(true);
+                    return t;
+                });
+
+        consumerExecutor = Executors.newFixedThreadPool(consumerThreadPoolSize,
+                r -> {
+                    Thread t = new Thread(r, "api-caller");
+//                    t.setDaemon(true);
+                    return t;
+                });
+
+        // Release all permits to the semaphore initially
+        consumerSemaphore.release(consumerThreadPoolSize);
+
+        // Start producer thread with fixed rate scheduling
+        producerExecutor.scheduleAtFixedRate(
+                this::pollAndQueueMessages,
+                0,
+                pollingIntervalSeconds,
+                TimeUnit.SECONDS);
+
+        // Start consumer threads
+        for (int i = 0; i < consumerThreadPoolSize; i++) {
+            final int consumerId = i;
+            consumerExecutor.submit(() -> processMessages(consumerId));
+        }
+
+        log.info("Message service initialized with {} consumer threads and polling interval of {} seconds",
+                consumerThreadPoolSize, pollingIntervalSeconds);
+    }
+
+    private void createStoredProcedures() {
+        createFetchPendingMessagesProcedure();
+        createUpdateMessageStatusBatchProcedure();
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        log.info("Shutting down message service...");
+
+        if (producerExecutor != null) {
+            producerExecutor.shutdown();
+            try {
+                if (!producerExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+                    producerExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                producerExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        if (consumerExecutor != null) {
+            consumerExecutor.shutdown();
+            try {
+                if (!consumerExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+                    consumerExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                consumerExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        log.info("Message service shutdown complete");
+    }
+
+    /**
+     * Producer method: Polls the database for pending messages and adds them to the queue
+     */
+    private void pollAndQueueMessages() {
+        try {
+            // Check if we should skip polling due to recent empty poll
+            long currentTime = System.currentTimeMillis();
+            if (noMessagesFound && (currentTime - lastEmptyPollTime) < pollingIntervalSeconds * 1000L) {
+                log.info("Skipping poll - no messages found in recent poll within last {} seconds",
+                        pollingIntervalSeconds);
+                return;
+            }
+
+            // Before polling, check if any consumer threads are available
+            log.info("Waiting for available consumer thread before polling...");
+            if (!consumerSemaphore.tryAcquire(1, 5, TimeUnit.SECONDS)) {
+                log.info("No consumer threads available, skipping this poll cycle");
+                return;
+            }
+
+            try {
+                log.info("Polling for pending messages (batch size: {})...", batchSize);
+
+                // Use repository to fetch pending messages
+                List<MessageInfo> messages = messageRepository.fetchPendingMessagesBatch(batchSize);
+
+                if (messages.isEmpty()) {
+                    log.info("No pending messages found");
+                    noMessagesFound = true;
+                    lastEmptyPollTime = System.currentTimeMillis();
+                    return;
+                }
+
+                log.info("Found {} pending messages, queueing for processing", messages.size());
+
+                // Update status to prevent other threads from picking these messages
+                updateMessageStatus(messages, 1); // 1 = Processing
+
+                // Add messages to the queue
+                messageQueue.put(messages);
+
+                // Reset flag since we found messages
+                noMessagesFound = false;
+
+            } finally {
+                // Release the semaphore permit we acquired
+                consumerSemaphore.release();
+                log.info("Semaphore released by producer, available permits: {}", consumerSemaphore.availablePermits());
+            }
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Producer thread interrupted while waiting for semaphore");
+        } catch (Exception e) {
+            log.error("Error polling for messages", e);
+        }
+    }
+
+    /**
+     * Consumer method: Processes messages from the queue
+     */
+    private void processMessages(int consumerId) {
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                // Try to acquire a permit from the semaphore
+                consumerSemaphore.acquire();
+
+                try {
+                    // Try to fill a batch from the queue
+                    List<MessageInfo> batch = messageQueue.poll(100, TimeUnit.MILLISECONDS);
+                    if (batch == null) {
+                        // No messages in queue, wait for polling interval if queue is empty
+                        log.debug("Consumer {} found no messages, waiting...", consumerId);
+                        Thread.sleep(pollingIntervalSeconds * 1000);
+                        continue;
+                    }
+
+
+                    // Process the batch
+                    log.info("Consumer {} processing batch of {} messages", consumerId, batch.size());
+                    cPaaSIntegrationService.sendMessagesInBatch(batch);
+
+                } finally {
+                    // Always release the permit
+                    consumerSemaphore.release();
+                    log.info("Semaphore released by consumer {}, available permits: {}", consumerId, consumerSemaphore.availablePermits());
+                }
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Consumer {} interrupted", consumerId);
+                break;
+            } catch (Exception e) {
+                log.error("Error processing messages in consumer {}", consumerId, e);
+
+                // Short delay to prevent CPU spinning on errors
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates the status of a batch of messages
+     */
+    private void updateMessageStatus(List<MessageInfo> messages, int status) {
+        try {
+            String messageIds = messages.stream()
+                    .map(MessageInfo::getUniqueId)
+                    .collect(java.util.stream.Collectors.joining(","));
+            log.info("Updating message status for {} messages", messageIds);
+            messageRepository.updateMessageStatusBatch(messageIds, status);
+        } catch (Exception e) {
+            log.error("Error updating message status", e);
+        }
+    }
+
+    /**
+     * Method to reset message status (for error recovery or testing)
+     */
+    @Transactional
+    public void updateStatusFlagsToZero(List<String> ids) {
+        messageRepository.updateMessageStatusBatch(String.join(",", ids), 0);
+    }
     private void createFetchPendingMessagesProcedure() {
         String sql = """
             CREATE OR REPLACE PROCEDURE SMS_SCHEMA.FETCH_PENDING_MESSAGES(
@@ -76,7 +294,7 @@ public class MessageService {
             END
         """;
         jdbcTemplate.execute(sql);
-        logger.warn("Stored procedure FETCH_PENDING_MESSAGES");
+        log.warn("Stored procedure FETCH_PENDING_MESSAGES");
     }
 
     private void createUpdateMessageStatusBatchProcedure() {
@@ -108,97 +326,8 @@ public class MessageService {
                                                            END;
         """;
         jdbcTemplate.execute(sql);
-        logger.warn("Stored procedure createUpdateMessageStatusBatchProcedure");
+        log.warn("Stored procedure createUpdateMessageStatusBatchProcedure");
 
     }
 
-    @PostConstruct
-    public void startScheduler() {
-        createFetchPendingMessagesProcedure();
-        createUpdateMessageStatusBatchProcedure();
-        scheduler = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(threadPoolCoreSize);
-
-        for (int i = 0; i < threadPoolCoreSize; i++) {
-            final int theadId = i;
-            long initialDelay = i * (pollingIntervalSeconds / threadPoolCoreSize);
-            scheduler.scheduleAtFixedRate(() -> {
-                logger.info("Thread {} polling for messages", theadId);
-                coordinatedPollAndProcessMessages(theadId);
-            }, initialDelay, pollingIntervalSeconds, TimeUnit.SECONDS);
-        }
-        logger.info("Message processing scheduler started with {} threads, polling every {} seconds",
-                threadPoolCoreSize, pollingIntervalSeconds);
-    }
-
-    @PreDestroy
-    public void stopScheduler() {
-        if (scheduler != null) {
-            logger.info("Shutting down message processing scheduler");
-            scheduler.shutdown();
-            try {
-                if (!scheduler.awaitTermination(30, TimeUnit.SECONDS)) {
-                    scheduler.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                scheduler.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
-
-    @Transactional
-    public void updateStatusFlagsToZero(List<String> ids) {
-        messageRepository.updateMessageStatusBatch(String.join(",", ids),0);
-    }
-
-
-    public void coordinatedPollAndProcessMessages(int threadId) {
-
-        try{
-            long currentTime = System.currentTimeMillis();
-            if(noMessagesFound && (currentTime - lastEmptyPollTime) < pollingIntervalSeconds * 1000) {
-                logger.info("Thread {} skipping poll - no messages found in recent poll within last {} seconds",
-                        threadId, pollingIntervalSeconds);
-                return;
-            }
-            logger.info("Thread {} checking for messages", threadId);
-            pollAndProcessMessages();
-        }catch(Exception e) {
-            logger.error("Error occurred while polling for messages", e);
-        }
-    }
-
-    @Transactional
-    public void pollAndProcessMessages() {
-
-        try {
-            logger.info("Polling for new messages (batch size: {})...", batchSize);
-
-            // Use repository to call stored procedure for fetching messages
-            List<MessageInfo> messages = messageRepository.fetchPendingMessagesBatch(batchSize);
-
-            if (messages.isEmpty()) {
-                logger.info("No pending messages found");
-                noMessagesFound = true;
-                lastEmptyPollTime = System.currentTimeMillis();
-                return;
-            }
-            // Reset the flag since we found messages
-            noMessagesFound = false;
-
-            logger.info("Processing {} messages...", messages.size());
-
-            // Process each message
-            try {
-                String response = cPaaSIntegrationService.sendMessagesInBatch(messages);
-
-                logger.debug("Successfully processed messages: {}", response);
-            } catch (Exception e) {
-                logger.error("Failed to process messages", e);
-            }
-
-        } catch (Exception e) {
-            logger.error("Error during message batch processing", e);
-        }
-    }
 }
