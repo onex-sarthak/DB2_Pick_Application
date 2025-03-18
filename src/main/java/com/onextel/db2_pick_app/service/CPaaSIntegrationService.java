@@ -40,7 +40,7 @@ public class CPaaSIntegrationService {
         this.webClient = webClientBuilder.baseUrl("https://api.smsc.ai").build();
     }
 
-    public String sendMessagesInBatch(List<MessageInfo> messages) {
+    public boolean sendMessagesInBatch(List<MessageInfo> messages) {
         try {
             String messageIdString = messages.stream()
                     .map(MessageInfo::getUniqueId)
@@ -69,8 +69,12 @@ public class CPaaSIntegrationService {
 
             log.info("API response : {}", response);
 
-            return messageIdString;
-        } catch (Exception e) {
+            return true;
+        } catch (WebClientResponseException e) {
+            log.error("Error response: {}", e.getResponseBodyAsString());
+            return false;
+        }
+        catch (Exception e) {
             throw new RuntimeException("Message batch processing failed", e);
         }
     }
