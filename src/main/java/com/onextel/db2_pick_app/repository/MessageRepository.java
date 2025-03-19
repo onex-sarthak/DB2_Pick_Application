@@ -34,5 +34,5 @@ public interface MessageRepository extends JpaRepository<MessageInfo, String> {
                                   @Param("NEW_STATUS") Integer newStatus);
 
 
-    List<MessageInfo> findAllByRecipientMobileIn(List<String> recipientMobileNumbers);
+    List<MessageInfo> findAllByRecipientMobileNumberIn(List<String> recipientMobileNumbers);
 }

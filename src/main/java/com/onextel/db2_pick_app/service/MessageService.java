@@ -133,9 +133,9 @@ public class MessageService {
         }
     }
 
-    /**
-     * Runnable class to process a batch of messages
-     */
+
+    //  Runnable class to process a batch of messages
+
     private class MessageBatchProcessor implements Runnable {
         private final List<MessageInfo> batch;
 
@@ -170,9 +170,8 @@ public class MessageService {
         }
     }
 
-    /**
-     * Updates the status of a batch of messages
-     */
+
+    //  Updates the status of a batch of messages
     private void updateMessageStatus(List<MessageInfo> messages, int status) {
         if (messages == null || messages.isEmpty()) {
             return;
@@ -189,9 +188,8 @@ public class MessageService {
         }
     }
 
-    /**
-     * Method to reset message status (for error recovery or testing)
-     */
+
+    //  Method to reset message status (for error recovery or testing)
     @Transactional
     public void resetMessageStatus(List<String> ids) {
         if (ids == null || ids.isEmpty()) {

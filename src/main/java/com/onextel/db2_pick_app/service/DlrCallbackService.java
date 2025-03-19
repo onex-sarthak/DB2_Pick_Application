@@ -21,7 +21,7 @@ public class DlrCallbackService {
     @Transactional
     public void processDlrCallbacks(List<DlrCallbackRequest> dlrCallbackRequests) {
         // Fetch all records to be updated
-        List<MessageInfo> messagesToUpdate = messageRepository.findAllByRecipientMobileIn(
+        List<MessageInfo> messagesToUpdate = messageRepository.findAllByRecipientMobileNumberIn(
                 dlrCallbackRequests.stream()
                         .map(DlrCallbackRequest::getRecipientMobileNumber)
                         .toList()
@@ -30,7 +30,7 @@ public class DlrCallbackService {
         // Update the records in memory
         for (MessageInfo message : messagesToUpdate) {
             dlrCallbackRequests.stream()
-                    .filter(request -> request.getRecipientMobileNumber().equals(message.getRecipientMobile()))
+                    .filter(request -> request.getRecipientMobileNumber().equals(message.getRecipientMobileNumber()))
                     .findFirst()
                     .ifPresent(request -> {
                         message.setDlrStatus(request.getDlrStatus());

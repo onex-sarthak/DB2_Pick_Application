@@ -4,12 +4,8 @@ import com.onextel.db2_pick_app.dto.SmsRequest;
 import com.onextel.db2_pick_app.model.MessageInfo;
 import com.onextel.db2_pick_app.repository.MessageRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -93,7 +89,7 @@ public class CPaaSIntegrationService {
     private SmsRequest.SmsDetail createSmsDetail(MessageInfo message) {
         return new SmsRequest.SmsDetail(
                 smsSenderId,
-                message.getRecipientMobile(),
+                message.getRecipientMobileNumber(),
                 message.getMessageContent(),
                 message.getUniqueId()
         );
