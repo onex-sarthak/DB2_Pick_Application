@@ -180,7 +180,7 @@ public class MessageService {
             String messageIds = messages.stream()
                     .map(MessageInfo::getUniqueId)
                     .collect(java.util.stream.Collectors.joining(","));
-            log.info("Updating status to {} for {} messages", status, messages.size());
+            log.info("Updating status to {} for {} ", status, messageIds);
             messageRepository.updateMessageStatusBatch(messageIds, status);
         } catch (Exception e) {
             log.error("Error updating message status", e);
