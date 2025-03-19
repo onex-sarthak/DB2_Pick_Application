@@ -3,7 +3,6 @@ package com.onextel.db2_pick_app.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.data.jpa.repository.query.Procedure;
 
 import java.time.LocalDateTime;
 
@@ -22,7 +21,7 @@ public class MessageInfo {
     private String messageContent;
 
     @Column(name = "RECIPIENT_MOBILE_NUMBER", nullable = false, length = 15)
-    private String recipientMobile;
+    private String recipientMobileNumber;
 
     @Column(name = "STATUS_FLAG", nullable = false)
     private String statusFlag;
