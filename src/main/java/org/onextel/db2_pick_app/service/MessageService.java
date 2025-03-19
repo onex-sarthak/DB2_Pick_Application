@@ -1,11 +1,11 @@
-package com.onextel.db2_pick_app.service;
+package org.onextel.db2_pick_app.service;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import com.onextel.db2_pick_app.model.MessageInfo;
-import com.onextel.db2_pick_app.repository.MessageRepository;
+import org.onextel.db2_pick_app.model.MessageInfo;
+import org.onextel.db2_pick_app.repository.MessageRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service

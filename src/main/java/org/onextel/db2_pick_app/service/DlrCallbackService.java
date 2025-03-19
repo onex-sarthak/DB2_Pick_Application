@@ -1,8 +1,8 @@
-package com.onextel.db2_pick_app.service;
+package org.onextel.db2_pick_app.service;
 
-import com.onextel.db2_pick_app.dto.DlrCallbackRequest;
-import com.onextel.db2_pick_app.model.MessageInfo;
-import com.onextel.db2_pick_app.repository.MessageRepository;
+import org.onextel.db2_pick_app.dto.DlrCallbackRequest;
+import org.onextel.db2_pick_app.model.MessageInfo;
+import org.onextel.db2_pick_app.repository.MessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,4 +1,4 @@
-package com.onextel.db2_pick_app;
+package org.onextel.db2_pick_app;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
