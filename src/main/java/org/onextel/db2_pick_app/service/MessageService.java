@@ -22,35 +22,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MessageService {
 
     // Configuration
-    @Value("${thread.pool.core.size:3}")
-    private int corePoolSize;
-
-    @Value("${thread.pool.max.size:5}")
-    private int maxPoolSize;
-
-    @Value("${thread.pool.keep.alive.seconds:60}")
-    private int keepAliveSeconds;
-
+    AtomicInteger activeVirtualThreads = new AtomicInteger(0);
     @Value("${message.polling.interval:10}")
     private int pollingIntervalSeconds;
 
     @Value("${message.batch.size:1}")
     private int batchSize;
 
-    @Value("${thread.pool.queue.capacity:100}")
-    private int queueCapacity;
-
     private final MessageRepository messageRepository;
     private final CPaaSIntegrationService cPaaSIntegrationService;
     private final JdbcTemplate jdbcTemplate;
 
-    // Thread pools
-    private ExecutorService messagePollingExecutor;
-    private ThreadPoolExecutor messageProcessorExecutor;
+    // Executor for virtual threads
+    private ExecutorService virtualThreadExecutor;
 
     // Flags for coordination
     private volatile boolean runPolling = true;
-    private final AtomicInteger threadCounter = new AtomicInteger(0);
 
     @Autowired
     public MessageService(
@@ -68,14 +55,14 @@ public class MessageService {
     private void continuousPollingTask() {
         while (runPolling) {
             try {
-                        boolean messagesFound = pollAndSubmitMessages();
+                boolean messagesFound = pollAndSubmitMessages();
 
-                        // If no messages were found, sleep for the polling interval
-                        if (!messagesFound) {
-                            log.debug("No messages found, sleeping for {} seconds", pollingIntervalSeconds);
-                            Thread.sleep(pollingIntervalSeconds * 1000L);
-                        }
-                        // If messages were found, continue immediately with the next poll
+                // If no messages were found, sleep for the polling interval
+                if (!messagesFound) {
+                    log.debug("No messages found, sleeping for {} seconds", pollingIntervalSeconds);
+                    Thread.sleep(pollingIntervalSeconds * 1000L);
+                }
+                // If messages were found, continue immediately with the next poll
             } catch (InterruptedException e) {
                 log.warn("Polling thread interrupted", e);
                 Thread.currentThread().interrupt();
@@ -95,12 +82,11 @@ public class MessageService {
 
     /**
      * Polls the database for pending messages and submits them
-     * to the ThreadPoolExecutor for processing
+     * to the virtual thread executor for processing
      * @return true if messages were found and submitted, false otherwise
      */
     private boolean pollAndSubmitMessages() {
         try {
-
             log.info("Polling for pending messages (batch size: {})...", batchSize);
 
             // Use repository to fetch pending messages
@@ -116,15 +102,21 @@ public class MessageService {
             // Update status to prevent other threads from picking these messages
             updateMessageStatus(messages, 1); // 1 = Processing
 
-            // Submit the batch to the thread pool executor
-            messageProcessorExecutor.submit(new MessageBatchProcessor(messages));
+            // Submit the batch to the virtual thread executor
 
-            log.info("Submitted batch of {} messages to the thread pool (current queue size: {})",
-                    messages.size(), messageProcessorExecutor.getQueue().size());
+//            for (Thread thread : Thread.getAllStackTraces().keySet()) {
+//                if (thread.isVirtual()) {
+//                    activeVirtualThreads.getAndIncrement();
+//                }
+//            }
+            System.out.println("Active Threads: " + Thread.activeCount());
+            virtualThreadExecutor.submit(new MessageBatchProcessor(messages));
+
+            log.info("Submitted batch of {} messages to the virtual thread executor", messages.size());
 
             return true;
         } catch (RejectedExecutionException e) {
-            log.warn("Thread pool rejected the task, queue might be full", e);
+            log.warn("Virtual thread executor rejected the task", e);
             return false;
         } catch (Exception e) {
             log.error("Error polling for messages", e);
@@ -132,9 +124,9 @@ public class MessageService {
         }
     }
 
-
-    //  Runnable class to process a batch of messages
-
+    /**
+     * Runnable class to process a batch of messages
+     */
     private class MessageBatchProcessor implements Runnable {
         private final List<MessageInfo> batch;
 
@@ -151,10 +143,8 @@ public class MessageService {
                 boolean response = cPaaSIntegrationService.sendMessagesInBatch(batch);
 
                 // Update message status based on result
-                if (response) {
-                    updateMessageStatus(batch, 1); // 1 = PickedUp
-                } else {
-                    updateMessageStatus(batch, 3); // 3 = Failed
+                if (!response) {
+                    updateMessageStatus(batch, 3); // 3 = failed
                 }
             } catch (Exception e) {
                 log.error("Error processing message batch", e);
@@ -169,7 +159,43 @@ public class MessageService {
         }
     }
 
+    // Other methods (updateMessageStatus, resetMessageStatus, createStoredProcedures, etc.) remain unchanged
 
+    @PreDestroy
+    public void shutdown() {
+        log.info("Shutting down message service...");
+
+        // Signal polling thread to stop
+        runPolling = false;
+
+        if (virtualThreadExecutor != null) {
+            virtualThreadExecutor.shutdown();
+            try {
+                if (!virtualThreadExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+                    virtualThreadExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                virtualThreadExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        log.info("Message service shutdown complete.");
+    }
+
+    @PostConstruct
+    public void initialize() {
+        // Create stored procedures
+        createStoredProcedures();
+
+        // Initialize virtual thread executor
+        virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
+        // Start continuous polling task on a virtual thread
+        virtualThreadExecutor.execute(this::continuousPollingTask);
+
+        log.info("Message service initialized with virtual threads and polling interval: {} seconds", pollingIntervalSeconds);
+    }
     //  Updates the status of a batch of messages
     private void updateMessageStatus(List<MessageInfo> messages, int status) {
         if (messages == null || messages.isEmpty()) {
@@ -261,74 +287,5 @@ public class MessageService {
     private void createStoredProcedures() {
         createFetchPendingMessagesProcedure();
         createUpdateMessageStatusBatchProcedure();
-    }
-
-    @PreDestroy
-    public void shutdown() {
-        log.info("Shutting down message service...");
-
-        // Signal polling thread to stop
-        runPolling = false;
-
-        if (messagePollingExecutor != null) {
-            messagePollingExecutor.shutdown();
-            try {
-                if (!messagePollingExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
-                    messagePollingExecutor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                messagePollingExecutor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        if (messageProcessorExecutor != null) {
-            messageProcessorExecutor.shutdown();
-            try {
-                if (!messageProcessorExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
-                    messageProcessorExecutor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                messageProcessorExecutor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        log.info("Message service shutdown complete. Queue size at shutdown: {}",
-                messageProcessorExecutor != null ? messageProcessorExecutor.getQueue().size() : 0);
-    }
-
-    @PostConstruct
-    public void initialize() {
-        // Create stored procedures
-        createStoredProcedures();
-
-        // Initialize thread pools
-        messagePollingExecutor = Executors.newSingleThreadExecutor(
-                r -> {
-                    Thread t = new Thread(r, "db-poller");
-                    return t;
-                });
-
-        // Initialize message processor thread pool with LinkedBlockingQueue
-        messageProcessorExecutor = new ThreadPoolExecutor(
-                corePoolSize,
-                maxPoolSize,
-                keepAliveSeconds,
-                TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(queueCapacity),
-                r -> {
-                    Thread t = new Thread(r, "message-processor-" + threadCounter.getAndIncrement());
-                    return t;
-                },
-                new ThreadPoolExecutor.CallerRunsPolicy() // If queue is full, the submitting thread runs the task
-        );
-
-        // Start continuous polling task
-        messagePollingExecutor.execute(this::continuousPollingTask);
-
-        log.info("Message service initialized with core pool size: {}, max pool size: {}, " +
-                        "queue capacity: {}, and polling interval: {} seconds",
-                corePoolSize, maxPoolSize, queueCapacity, pollingIntervalSeconds);
     }
 }

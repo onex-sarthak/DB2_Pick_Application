@@ -4,7 +4,7 @@ batch:
     enabled: true
 message:
   batch:
-    size: 2
+    size: 50
   polling:
     interval: 10
 server:
