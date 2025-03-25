@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -179,7 +180,7 @@ public class MessageService {
         try {
             String messageIds = messages.stream()
                     .map(MessageInfo::getUniqueId)
-                    .collect(java.util.stream.Collectors.joining(","));
+                    .collect(Collectors.joining(","));
             log.info("Updating status to {} for {} ", status, messageIds);
             messageRepository.updateMessageStatusBatch(messageIds, status);
         } catch (Exception e) {
@@ -229,29 +230,29 @@ public class MessageService {
     private void createUpdateMessageStatusBatchProcedure() {
         String sql = """  
                 CREATE OR REPLACE PROCEDURE SMS_SCHEMA.UPDATE_MESSAGE_STATUS_BATCH(
-                                                                       IN UNIQUE_IDS VARCHAR(1000),  -- Comma-separated list of UNIQUE_ID values
+                                                                       IN UNIQUE_IDS VARCHAR(10000),  -- Comma-separated list of UNIQUE_ID values
                                                                        IN NEW_STATUS INTEGER         -- New status value to set
                                                                    )
                                                                    LANGUAGE SQL
                                                                    BEGIN
-                                                                       DECLARE SQL_QUERY VARCHAR(2000);
-                                                                       DECLARE v_unique_ids VARCHAR(1000);
+                                                                       DECLARE SQL_QUERY VARCHAR(32000);
+                                                                       DECLARE v_unique_ids VARCHAR(10000);
 
-                                                                       -- Wrap each UNIQUE_ID in single quotes and separate with commas
-                                                                       SET v_unique_ids = REPLACE(TRIM(UNIQUE_IDS), ',', ''',''');
-
-                                                                       -- Add single quotes at the beginning and end of the list
-                                                                       SET v_unique_ids = '''' || v_unique_ids || '''';
-  
-                                                                       -- Build the SQL query dynamically
-                                                                       SET SQL_QUERY = 'UPDATE SMS_SCHEMA.MESSAGE_INFO SET STATUS_FLAG = ' || NEW_STATUS ||
-                                                                                       ' WHERE UNIQUE_ID IN (' || v_unique_ids || ')';
-
-                                                                       -- Execute the dynamically constructed SQL query
-                                                                       EXECUTE IMMEDIATE SQL_QUERY;
-
-                                                                       -- Commit the changes
-                                                                       COMMIT;
+                                                                        -- First remove all spaces, then replace commas with quoted commas
+                                                                        SET v_unique_ids = REPLACE(REPLACE(TRIM(UNIQUE_IDS), ' ', ''), ',', ''',''');
+                                                                        
+                                                                        -- Add single quotes at the beginning and end of the list
+                                                                        SET v_unique_ids = '''' || v_unique_ids || '''';
+                                                                        
+                                                                        -- Build the SQL query dynamically
+                                                                        SET SQL_QUERY = 'UPDATE SMS_SCHEMA.MESSAGE_INFO SET STATUS_FLAG = ' || CAST(NEW_STATUS AS VARCHAR(10)) ||
+                                                                                        ' WHERE UNIQUE_ID IN (' || v_unique_ids || ')';
+                                                                        
+                                                                        -- Execute the dynamically constructed SQL query
+                                                                        EXECUTE IMMEDIATE SQL_QUERY;
+                                                                        
+                                                                        -- Commit the changes
+                                                                        COMMIT;
                                                                    END;
         """;
         jdbcTemplate.execute(sql);

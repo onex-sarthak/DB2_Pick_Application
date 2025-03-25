@@ -1,14 +1,18 @@
 apikey: sCYmf0y9
+
 batch:
   processing:
     enabled: true
+    
 message:
   batch:
-    size: 2
+    size: 500
   polling:
     interval: 10
+    
 server:
   port: 8082
+  
 spring:
   application:
     name: DB2_Pick_App
@@ -24,16 +28,29 @@ spring:
     open-in-view: false
     properties:
       hibernate:
+        hibernate:
+          format_sql: true
         jdbc:
           batch_size: 50
         order_inserts: true
         order_updates: true
     show-sql: true
+    
+    
 thread:
   pool:
     core:
-      size: 3
-    max:
       size: 5
+    max:
+      size: 10
     queue:
-      capacity: 10
+      capacity: 100
+
+logging:
+  level:
+    org:
+      hibernate:
+        resource:
+          jdbc:
+            internal:
+              ResourceRegistryStandardImpl=trace:
