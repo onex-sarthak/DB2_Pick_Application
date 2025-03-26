@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.concurrent.*;
@@ -44,6 +46,8 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final CPaaSIntegrationService cPaaSIntegrationService;
     private final JdbcTemplate jdbcTemplate;
+    private final TransactionTemplate transactionTemplate;
+
 
     // Thread pools
     private ExecutorService messagePollingExecutor;
@@ -57,10 +61,11 @@ public class MessageService {
     public MessageService(
             MessageRepository messageRepository,
             CPaaSIntegrationService cPaaSIntegrationService,
-            JdbcTemplate jdbcTemplate) {
+            JdbcTemplate jdbcTemplate, PlatformTransactionManager transactionManager) {
         this.messageRepository = messageRepository;
         this.cPaaSIntegrationService = cPaaSIntegrationService;
         this.jdbcTemplate = jdbcTemplate;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -69,7 +74,15 @@ public class MessageService {
     private void continuousPollingTask() {
         while (runPolling) {
             try {
-                        boolean messagesFound = pollAndSubmitMessages();
+                    boolean messagesFound = Boolean.TRUE.equals(transactionTemplate.execute(status -> {
+                                try {
+                                    return pollAndSubmitMessages();
+                                } catch (Exception e) {
+                                    status.setRollbackOnly();
+                                    throw e;
+                                }
+                            }
+                    ));
 
                         // If no messages were found, sleep for the polling interval
                         if (!messagesFound) {
@@ -99,7 +112,8 @@ public class MessageService {
      * to the ThreadPoolExecutor for processing
      * @return true if messages were found and submitted, false otherwise
      */
-    private boolean pollAndSubmitMessages() {
+
+    protected boolean pollAndSubmitMessages() {
         try {
 
             log.info("Polling for pending messages (batch size: {})...", batchSize);

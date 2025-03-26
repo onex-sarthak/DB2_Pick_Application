@@ -8,7 +8,7 @@ message:
   batch:
     size: 10
   polling:
-    interval: 10
+    interval: 30
     
 server:
   port: 8082

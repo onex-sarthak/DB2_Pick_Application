@@ -11,6 +11,13 @@ import java.time.LocalDateTime;
 @Table(name = "MESSAGE_INFO", schema = "SMS_SCHEMA")
 @Getter
 @Setter
+
+@NamedStoredProcedureQuery(name = "MessageInfo.FETCH_PENDING_MESSAGES" ,
+    procedureName = "SMS_SCHEMA.FETCH_PENDING_MESSAGES", parameters = {
+        @StoredProcedureParameter(mode = ParameterMode.IN, name = "BATCH_SIZE", type = Integer.class)
+})
+
+
 public class MessageInfo {
 
     @Id
