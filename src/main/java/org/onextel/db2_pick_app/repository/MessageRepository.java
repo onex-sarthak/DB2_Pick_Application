@@ -14,7 +14,7 @@ import java.util.List;
 @Repository
 public interface MessageRepository extends JpaRepository<MessageInfo, String> {
 
-    @Transactional
+    @Transactional(readOnly = true)
     @Query(value = "CALL SMS_SCHEMA.FETCH_PENDING_MESSAGES(:BATCH_SIZE);", nativeQuery = true)
     List<MessageInfo> fetchPendingMessagesBatch(@Param("BATCH_SIZE") int batch_size);
 
