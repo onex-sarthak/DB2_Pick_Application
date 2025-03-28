@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,7 +19,6 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class CPaaSIntegrationService {
-    private final MessageRepository messageRepository;
     private final WebClient webClient;
 
     @Value("${api.auth.token:sCYmf0y9}")
@@ -30,20 +31,18 @@ public class CPaaSIntegrationService {
 
     @Autowired
     public CPaaSIntegrationService(
-            MessageRepository messageRepository,
             WebClient.Builder webClientBuilder) {
-        this.messageRepository = messageRepository;
         this.webClient = webClientBuilder.baseUrl("https://api.smsc.ai").build();
     }
 
-    public boolean sendMessagesInBatch(List<MessageInfo> messages) {
+    public boolean sendMessagesInBatch(List<MessageInfo> messages) throws Throwable {
         try {
             String messageIdString = messages.stream()
                     .map(MessageInfo::getUniqueId)
                     .collect(Collectors.joining(","));
 
             log.info("Processing batch of {} messages with ids: {}", messages.size(),messageIdString);
-            messageRepository.updateMessageStatusBatch(messageIdString, 1);
+//            messageRepository.updateMessageStatusBatch(messageIdString, 1);
 
             List<SmsRequest.SmsDetail> smsRequests = messages.stream()
                     .map(this::createSmsDetail)
@@ -54,16 +53,20 @@ public class CPaaSIntegrationService {
 
             log.info("Sending request : {}",requestBody.toString());
 
+
+            // This needs to be verified for retry...
             String response = webClient.post()
                     .uri("api/jsmslist")
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .doOnSuccess(res -> log.info("API response received successfully"))
+                    .retryWhen(
+                            Retry.fixedDelay(3, Duration.ofSeconds(5)) // Retry up to 3 times with a 5-second delay
+                                    .filter(throwable -> throwable instanceof WebClientResponseException)
+                    )
+                    .doOnSuccess(res -> log.info("API response received successfully: {}", res))
                     .doOnError(WebClientResponseException.class, ex -> log.error("Error response: {}", ex.getResponseBodyAsString()))
-                    .block();
-
-            log.info("API response : {}", response);
+                    .toString();
 
             return true;
         } catch (WebClientResponseException e) {
@@ -74,17 +77,7 @@ public class CPaaSIntegrationService {
             throw new RuntimeException("Message batch processing failed", e);
         }
     }
-    private void updateMessageStatus(List<MessageInfo> messages, int status) {
-        try {
-            String messageIds = messages.stream()
-                    .map(MessageInfo::getUniqueId)
-                    .collect(Collectors.joining(","));
 
-            messageRepository.updateMessageStatusBatch(messageIds, status);
-        } catch (Exception e) {
-            log.error("Error updating message status", e);
-        }
-    }
 
     private SmsRequest.SmsDetail createSmsDetail(MessageInfo message) {
         return new SmsRequest.SmsDetail(

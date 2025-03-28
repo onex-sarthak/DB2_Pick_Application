@@ -5,6 +5,7 @@ import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.onextel.db2_pick_app.model.MessageInfo;
+import org.onextel.db2_pick_app.repository.CustomMessageRepositoryImpl;
 import org.onextel.db2_pick_app.repository.MessageRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +42,7 @@ public class MessageService {
     @Value("${thread.pool.queue.capacity:100}")
     private int queueCapacity;
 
-    private final MessageRepository messageRepository;
+    private final CustomMessageRepositoryImpl customMessageRepositoryImpl;
     private final CPaaSIntegrationService cPaaSIntegrationService;
     private final JdbcTemplate jdbcTemplate;
 
@@ -55,10 +56,10 @@ public class MessageService {
 
     @Autowired
     public MessageService(
-            MessageRepository messageRepository,
+            CustomMessageRepositoryImpl customMessageRepositoryImpl,
             CPaaSIntegrationService cPaaSIntegrationService,
             JdbcTemplate jdbcTemplate) {
-        this.messageRepository = messageRepository;
+        this.customMessageRepositoryImpl = customMessageRepositoryImpl;
         this.cPaaSIntegrationService = cPaaSIntegrationService;
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -67,16 +68,21 @@ public class MessageService {
      * Main polling method that is executed as a continuous task
      */
     private void continuousPollingTask() {
+        long startTime = System.currentTimeMillis(); // Record the start time
         while (runPolling) {
             try {
-                        boolean messagesFound = pollAndSubmitMessages();
+                boolean messagesFound = pollAndSubmitMessages();
 
-                        // If no messages were found, sleep for the polling interval
-                        if (!messagesFound) {
-                            log.debug("No messages found, sleeping for {} seconds", pollingIntervalSeconds);
-                            Thread.sleep(pollingIntervalSeconds * 1000L);
-                        }
-                        // If messages were found, continue immediately with the next poll
+                // If no messages were found, sleep for the polling interval
+                if (!messagesFound) {
+                    long endTime = System.currentTimeMillis(); // Record the end time
+                    long totalTime = endTime - startTime; // Calculate the total time
+                    startTime = endTime;
+                    log.info("All messages processed. Total time taken:  {} seconds", totalTime / 1000);
+                    log.debug("No messages found, sleeping for {} seconds", pollingIntervalSeconds);
+                    Thread.sleep(pollingIntervalSeconds * 1000L);
+                }
+                // If messages were found, continue immediately with the next poll
             } catch (InterruptedException e) {
                 log.warn("Polling thread interrupted", e);
                 Thread.currentThread().interrupt();
@@ -105,7 +111,7 @@ public class MessageService {
             log.info("Polling for pending messages (batch size: {})...", batchSize);
 
             // Use repository to fetch pending messages
-            List<MessageInfo> messages = messageRepository.fetchPendingMessagesBatch(batchSize);
+            List<MessageInfo> messages = customMessageRepositoryImpl.fetchPendingMessagesBatch(batchSize);
 
             if (messages.isEmpty()) {
                 log.info("No pending messages found");
@@ -137,6 +143,7 @@ public class MessageService {
     //  Runnable class to process a batch of messages
 
     private class MessageBatchProcessor implements Runnable {
+
         private final List<MessageInfo> batch;
 
         public MessageBatchProcessor(List<MessageInfo> batch) {
@@ -157,7 +164,7 @@ public class MessageService {
                 } else {
                     updateMessageStatus(batch, 3); // 3 = Failed
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 log.error("Error processing message batch", e);
 
                 // Update status of failed batch
@@ -182,7 +189,7 @@ public class MessageService {
                     .map(MessageInfo::getUniqueId)
                     .collect(Collectors.joining(","));
             log.info("Updating status to {} for {} ", status, messageIds);
-            messageRepository.updateMessageStatusBatch(messageIds, status);
+            customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, status);
         } catch (Exception e) {
             log.error("Error updating message status", e);
         }
@@ -195,7 +202,7 @@ public class MessageService {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        messageRepository.updateMessageStatusBatch(String.join(",", ids), 0);
+        customMessageRepositoryImpl.updateMessageStatusBatch(String.join(",", ids), 0);
         log.info("Reset status for {} messages", ids.size());
     }
 
