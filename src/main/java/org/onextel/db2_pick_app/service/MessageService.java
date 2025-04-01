@@ -100,6 +100,62 @@ public class MessageService {
         }
     }
 
+
+
+    //  Runnable class to process a batch of messages
+    private class MessageBatchProcessor implements Runnable {
+
+        private final List<MessageInfo> batch;
+
+        public MessageBatchProcessor(List<MessageInfo> batch) {
+            this.batch = batch;
+        }
+
+        @Override
+        public void run() {
+            try {
+                log.info("Processing batch of {} messages by thread {}", batch.size(), Thread.currentThread().getName());
+
+                // Process the batch using the CPaaS integration service
+                boolean response = cPaaSIntegrationService.sendMessagesInBatch(batch);
+
+                // Update message status based on result
+                if (response) {
+                    updateMessageStatus(batch, 1); // 1 = PickedUp
+                } else {
+                    updateMessageStatus(batch, 3); // 3 = Failed
+                }
+            } catch (Throwable e) {
+                log.error("Error processing message batch", e);
+
+                // Update status of failed batch
+                try {
+                    updateMessageStatus(batch, 3); // 3 = Failed
+                } catch (Exception ex) {
+                    log.error("Failed to update status for failed messages", ex);
+                }
+            }
+        }
+
+    }
+
+    //  Updates the status of a batch of messages
+
+    private void updateMessageStatus(List<MessageInfo> messages, int status) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+
+        try {
+            String messageIds = messages.stream()
+                    .map(MessageInfo::getUniqueId)
+                    .collect(Collectors.joining(","));
+            log.info("Updating status to {} for {} ", status, messageIds);
+            customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, status);
+        } catch (Exception e) {
+            log.error("Error updating message status", e);
+        }
+    }
     /**
      * Polls the database for pending messages and submits them
      * to the ThreadPoolExecutor for processing
@@ -140,62 +196,6 @@ public class MessageService {
     }
 
 
-    //  Runnable class to process a batch of messages
-
-    private class MessageBatchProcessor implements Runnable {
-
-        private final List<MessageInfo> batch;
-
-        public MessageBatchProcessor(List<MessageInfo> batch) {
-            this.batch = batch;
-        }
-
-        @Override
-        public void run() {
-            try {
-                log.info("Processing batch of {} messages by thread {}", batch.size(), Thread.currentThread().getName());
-
-                // Process the batch using the CPaaS integration service
-                boolean response = cPaaSIntegrationService.sendMessagesInBatch(batch);
-
-                // Update message status based on result
-                if (response) {
-                    updateMessageStatus(batch, 1); // 1 = PickedUp
-                } else {
-                    updateMessageStatus(batch, 3); // 3 = Failed
-                }
-            } catch (Throwable e) {
-                log.error("Error processing message batch", e);
-
-                // Update status of failed batch
-                try {
-                    updateMessageStatus(batch, 3); // 3 = Failed
-                } catch (Exception ex) {
-                    log.error("Failed to update status for failed messages", ex);
-                }
-            }
-        }
-    }
-
-
-    //  Updates the status of a batch of messages
-    private void updateMessageStatus(List<MessageInfo> messages, int status) {
-        if (messages == null || messages.isEmpty()) {
-            return;
-        }
-
-        try {
-            String messageIds = messages.stream()
-                    .map(MessageInfo::getUniqueId)
-                    .collect(Collectors.joining(","));
-            log.info("Updating status to {} for {} ", status, messageIds);
-            customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, status);
-        } catch (Exception e) {
-            log.error("Error updating message status", e);
-        }
-    }
-
-
     //  Method to reset message status (for error recovery or testing)
     @Transactional
     public void resetMessageStatus(List<String> ids) {
@@ -222,18 +222,6 @@ public class MessageService {
                 }
             } catch (InterruptedException e) {
                 messagePollingExecutor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        if (messageProcessorExecutor != null) {
-            messageProcessorExecutor.shutdown();
-            try {
-                if (!messageProcessorExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
-                    messageProcessorExecutor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                messageProcessorExecutor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
         }
