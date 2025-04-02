@@ -28,14 +28,19 @@ public class DatabaseInitializer {
 
     private void createStoredProcedures() {
         try {
+            String fetchAndProcessMessagesSql = new String(Files.readAllBytes(Paths.get("/home/hemal/Documents/DB2_Pick_Application/src/main/resources/fetch_and_process_messages.sql")));
             String fetchPendingMessagesSql = new String(Files.readAllBytes(Paths.get("/home/hemal/Documents/DB2_Pick_Application/src/main/resources/fetch_pending_messages.sql")));
             String updateMessageStatusBatchSql = new String(Files.readAllBytes(Paths.get("/home/hemal/Documents/DB2_Pick_Application/src/main/resources/update_message_status_batch.sql")));
 
             jdbcTemplate.execute(fetchPendingMessagesSql);
             log.info("Stored procedure FETCH_PENDING_MESSAGES created");
 
+
             jdbcTemplate.execute(updateMessageStatusBatchSql);
             log.info("Stored procedure UPDATE_MESSAGE_STATUS_BATCH created");
+
+            jdbcTemplate.execute(fetchAndProcessMessagesSql);
+            log.info("Stored procedure PROCESS_SMS_BATCH created");
         } catch (IOException e) {
             log.error("Error reading SQL files", e);
         }

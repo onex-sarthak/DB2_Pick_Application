@@ -7,15 +7,19 @@ RESULT SETS 1
 BEGIN
     -- Declare cursor
     DECLARE message_cursor CURSOR WITH RETURN FOR
-SELECT *
-FROM SMS_SCHEMA.MESSAGE_INFO
-WHERE STATUS_FLAG = 0
-ORDER BY TIMESTAMP ASC
-    FETCH FIRST BATCH_SIZE ROWS ONLY;
+    SELECT * FROM FINAL TABLE (
+        UPDATE (
+            SELECT *
+            FROM SMS_SCHEMA.MESSAGE_INFO
+            WHERE STATUS_FLAG = '0'
+            ORDER BY TIMESTAMP ASC
+            FETCH FIRST BATCH_SIZE ROWS ONLY
+        )
+        SET STATUS_FLAG = '1'
+    );
+    -- Set lock wait timeout to prevent deadlocks
+    SET CURRENT LOCK TIMEOUT 10;
 
--- Set lock wait timeout to prevent deadlocks
-SET CURRENT LOCK TIMEOUT 10;
-
-    -- Open the cursor
-OPEN message_cursor;
+        -- Open the cursor
+    OPEN message_cursor;
 END;

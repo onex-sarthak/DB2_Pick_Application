@@ -53,7 +53,6 @@ public class CPaaSIntegrationService {
 
             log.info("Sending request : {}",requestBody.toString());
 
-
             // This needs to be verified for retry...
             String response = webClient.post()
                     .uri("api/jsmslist")
@@ -66,7 +65,9 @@ public class CPaaSIntegrationService {
                     )
                     .doOnSuccess(res -> log.info("API response received successfully: {}", res))
                     .doOnError(WebClientResponseException.class, ex -> log.error("Error response: {}", ex.getResponseBodyAsString()))
-                    .toString();
+                    .block();
+
+            log.info("Response : {}", response);
 
             return true;
         } catch (WebClientResponseException e) {
