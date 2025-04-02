@@ -3,6 +3,7 @@ package org.onextel.db2_pick_app.repository;
 import jakarta.persistence.*;
 import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.model.MessageInfo;
+import org.onextel.db2_pick_app.model.MessageStatus;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,10 +35,10 @@ public class CustomMessageRepositoryImpl implements CustomMessageRepository {
 
     @Override
     @Transactional
-    public void updateMessageStatusBatch(String uniqueIds, Integer newStatus) {
+    public void updateMessageStatusBatch(String uniqueIds, MessageStatus newStatus) {
         Query query = entityManager.createNativeQuery("CALL SMS_SCHEMA.UPDATE_MESSAGE_STATUS_BATCH(:UNIQUE_IDS , :NEW_STATUS)");
         query.setParameter("UNIQUE_IDS", uniqueIds);
-        query.setParameter("NEW_STATUS", newStatus);
+        query.setParameter("NEW_STATUS", newStatus.getDbValue());
         query.executeUpdate();
     }
 
