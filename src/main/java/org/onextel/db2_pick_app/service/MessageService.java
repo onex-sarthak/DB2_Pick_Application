@@ -5,6 +5,7 @@ import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.onextel.db2_pick_app.model.MessageInfo;
+import org.onextel.db2_pick_app.model.MessageStatus;
 import org.onextel.db2_pick_app.repository.CustomMessageRepositoryImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -119,8 +120,8 @@ public class MessageService {
                 String messageIds = messages.stream()
                         .map(MessageInfo::getUniqueId)
                         .collect(Collectors.joining(","));
-                log.info("Updating status to {} for {} ", 3, messageIds);
-                customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, 3);
+                log.info("Updating status to {} for {} ", MessageStatus.FAILED, messageIds);
+                customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, MessageStatus.FAILED);
             } catch (Exception e) {
                 log.error("Error updating message status", e);
             }
@@ -201,7 +202,7 @@ public class MessageService {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        customMessageRepositoryImpl.updateMessageStatusBatch(String.join(",", ids), 0);
+        customMessageRepositoryImpl.updateMessageStatusBatch(String.join(",", ids), MessageStatus.PENDING);
         log.info("Reset status for {} messages", ids.size());
     }
 

@@ -25,7 +25,7 @@ public class MessageInfo {
     private String recipientMobileNumber;
 
     @Column(name = "STATUS_FLAG", nullable = false)
-    private String statusFlag;
+    private MessageStatus statusFlag;
 
     @Column(name = "TIMESTAMP", nullable = false)
     private LocalDateTime timestamp;
