@@ -1,5 +1,6 @@
 package org.onextel.db2_pick_app.model;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

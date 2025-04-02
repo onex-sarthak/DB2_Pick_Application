@@ -1,23 +1,20 @@
-CREATE OR REPLACE PROCEDURE PROCESS_SMS_BATCH (
-    IN batch_size INTEGER
+CREATE OR REPLACE PROCEDURE SMS_SCHEMA.PROCESS_SMS_BATCH (
+    IN BATCH_SIZE INTEGER
 )
-LANGUAGE SQL
-MODIFIES SQL DATA
+    LANGUAGE SQL
+    MODIFIES SQL DATA
+    DYNAMIC RESULT SETS 1
 BEGIN
-    -- Declare cursor that will both update and return the rows
-    DECLARE result_cursor CURSOR WITH RETURN FOR
-SELECT UNIQUE_ID, MESSAGE_CONTENT, RECIPIENT_MOBILE_NUMBER
-FROM FINAL TABLE (
-            UPDATE (
-                SELECT *
-                FROM SMS_SCHEMA.MESSAGE_INFO
+    -- Update and return in one operation
+    DECLARE C1 CURSOR WITH RETURN TO CALLER FOR
+        SELECT * FROM FINAL TABLE (
+                                   UPDATE (
+                SELECT * FROM SMS_SCHEMA.MESSAGE_INFO
                 WHERE STATUS_FLAG = '0'
                 ORDER BY TIMESTAMP
-                FETCH FIRST batch_size ROWS ONLY
+                FETCH FIRST BATCH_SIZE ROWS ONLY
             )
-            SET STATUS_FLAG = 1
-        );
-
--- Open the cursor which executes the update and returns results
-OPEN result_cursor;
+            SET STATUS_FLAG = '1'
+            );
+    OPEN C1;
 END

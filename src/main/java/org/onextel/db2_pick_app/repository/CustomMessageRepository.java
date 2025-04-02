@@ -10,4 +10,6 @@ public interface CustomMessageRepository {
     void updateStatusFlags(List<String> ids);
 
     void updateMessageStatusBatch(String uniqueIds, Integer newStatus);
+
+    List<MessageInfo> fetchAndUpdatePendingMessagesBatch(int batchSize);
 }

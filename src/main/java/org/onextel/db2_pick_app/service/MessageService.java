@@ -6,7 +6,6 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.onextel.db2_pick_app.model.MessageInfo;
 import org.onextel.db2_pick_app.repository.CustomMessageRepositoryImpl;
-import org.onextel.db2_pick_app.repository.MessageRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -111,6 +110,22 @@ public class MessageService {
             this.batch = batch;
         }
 
+        private void updateMessageStatus(List<MessageInfo> messages) {
+            if (messages == null || messages.isEmpty()) {
+                return;
+            }
+
+            try {
+                String messageIds = messages.stream()
+                        .map(MessageInfo::getUniqueId)
+                        .collect(Collectors.joining(","));
+                log.info("Updating status to {} for {} ", 3, messageIds);
+                customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, 3);
+            } catch (Exception e) {
+                log.error("Error updating message status", e);
+            }
+        }
+
         @Override
         public void run() {
             try {
@@ -120,17 +135,15 @@ public class MessageService {
                 boolean response = cPaaSIntegrationService.sendMessagesInBatch(batch);
 
                 // Update message status based on result
-                if (response) {
-                    updateMessageStatus(batch, 1); // 1 = PickedUp
-                } else {
-                    updateMessageStatus(batch, 3); // 3 = Failed
+                if(!response) {
+                    updateMessageStatus(batch); // 3 = Failed
                 }
             } catch (Throwable e) {
                 log.error("Error processing message batch", e);
 
                 // Update status of failed batch
                 try {
-                    updateMessageStatus(batch, 3); // 3 = Failed
+                    updateMessageStatus(batch); // 3 = Failed
                 } catch (Exception ex) {
                     log.error("Failed to update status for failed messages", ex);
                 }
@@ -141,21 +154,7 @@ public class MessageService {
 
     //  Updates the status of a batch of messages
 
-    private void updateMessageStatus(List<MessageInfo> messages, int status) {
-        if (messages == null || messages.isEmpty()) {
-            return;
-        }
 
-        try {
-            String messageIds = messages.stream()
-                    .map(MessageInfo::getUniqueId)
-                    .collect(Collectors.joining(","));
-            log.info("Updating status to {} for {} ", status, messageIds);
-            customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, status);
-        } catch (Exception e) {
-            log.error("Error updating message status", e);
-        }
-    }
     /**
      * Polls the database for pending messages and submits them
      * to the ThreadPoolExecutor for processing
@@ -167,7 +166,7 @@ public class MessageService {
             log.info("Polling for pending messages (batch size: {})...", batchSize);
 
             // Use repository to fetch pending messages
-            List<MessageInfo> messages = customMessageRepositoryImpl.fetchPendingMessagesBatch(batchSize);
+            List<MessageInfo> messages = customMessageRepositoryImpl.fetchAndUpdatePendingMessagesBatch(batchSize);
 
             if (messages.isEmpty()) {
                 log.info("No pending messages found");
@@ -177,7 +176,7 @@ public class MessageService {
             log.info("Found {} pending messages, submitting for processing", messages.size());
 
             // Update status to prevent other threads from picking these messages
-            updateMessageStatus(messages, 1); // 1 = Processing
+//            updateMessageStatus(messages, 1); // 1 = Processing
 
             // Submit the batch to the thread pool executor
             messageProcessorExecutor.submit(new MessageBatchProcessor(messages));
