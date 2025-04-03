@@ -133,10 +133,10 @@ public class MessageService {
                 log.info("Processing batch of {} messages by thread {}", batch.size(), Thread.currentThread().getName());
 
                 // Process the batch using the CPaaS integration service
-                boolean response = cPaaSIntegrationService.sendMessagesInBatch(batch);
+                Boolean response = cPaaSIntegrationService.sendMessagesInBatch(batch).block();
 
                 // Update message status based on result
-                if(!response) {
+                if(Boolean.FALSE.equals(response)) {
                     updateMessageStatus(batch); // 3 = Failed
                 }
             } catch (Throwable e) {
@@ -182,8 +182,8 @@ public class MessageService {
             // Submit the batch to the thread pool executor
             messageProcessorExecutor.submit(new MessageBatchProcessor(messages));
 
-            log.info("Submitted batch of {} messages to the thread pool (current queue size: {})",
-                    messages.size(), messageProcessorExecutor.getQueue().size());
+            log.info("Submitted batch of {} messages for processing. WebClient will auto-retry on failures.",
+                    messages.size());
 
             return true;
         } catch (RejectedExecutionException e) {
