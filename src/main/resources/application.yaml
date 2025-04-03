@@ -21,6 +21,18 @@ spring:
     password: Sarthak@51
     url: jdbc:db2://localhost:50012/SAMPLE
     username: db2inst2
+    hikari:
+      connection-test-query : SELECT 1 FROM SYSIBM.SYSDUMMY1
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 5000
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      pool-name: DB2ConnectionPool
+      registerMbeans: true
+  
+  
+  
   jpa:
     database-platform: org.hibernate.dialect.DB2Dialect
     hibernate:
@@ -46,11 +58,18 @@ thread:
     queue:
       capacity: 100
 
-#logging:
-#  level:
-#    org:
-#      hibernate:
-#        resource:
-#          jdbc:
-#            internal:
-#              ResourceRegistryStandardImpl : trace
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+      base-path: /actuator  # This is default
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      access: unrestricted
+  prometheus:
+    metrics:
+      export:
+        enabled: true
