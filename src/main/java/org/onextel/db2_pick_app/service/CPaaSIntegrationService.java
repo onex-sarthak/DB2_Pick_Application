@@ -52,7 +52,7 @@ public class CPaaSIntegrationService {
         log.info("Sending request: {}", requestBody);
 
         return webClient.post()
-                .uri("/api/jsmslis")
+                .uri("/api/jsmslist")
                 .bodyValue(requestBody)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response -> {

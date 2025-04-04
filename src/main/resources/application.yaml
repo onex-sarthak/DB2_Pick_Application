@@ -10,8 +10,17 @@ message:
   polling:
     interval: 10
     
+
+  
 server:
   port: 8082
+  tomcat:
+    threads:
+      min-spare: 10
+      max: 200
+    accept-count: 200
+    max-connections: 5000
+    connection-timeout: 20000
   
 spring:
   application:
@@ -64,12 +73,11 @@ management:
       exposure:
         include: '*'
       base-path: /actuator  # This is default
-  endpoint:
-    health:
-      show-details: always
-    metrics:
-      access: unrestricted
-  prometheus:
-    metrics:
-      export:
-        enabled: true
+      
+      
+      
+logging:
+  level:
+    org.apache.tomcat.util.threads: DEBUG
+    org.apache.catalina.core: DEBUG
+    org.apache.coyote.http11.Http11NioProtocol: DEBUG
