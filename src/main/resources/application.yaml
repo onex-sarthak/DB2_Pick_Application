@@ -6,7 +6,7 @@ batch:
     
 message:
   batch:
-    size: 100
+    size: 500
   polling:
     interval: 10
     
@@ -81,3 +81,5 @@ logging:
     org.apache.tomcat.util.threads: DEBUG
     org.apache.catalina.core: DEBUG
     org.apache.coyote.http11.Http11NioProtocol: DEBUG
+    root: INFO
+    org.springframework: INFO
