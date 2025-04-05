@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 
-@Repository
-public interface MessageRepository extends JpaRepository<MessageInfo, String> {
-    List<MessageInfo> findAllByRecipientMobileNumberIn(List<String> recipientMobileNumbers);
-}
+//@Repository
+//public interface MessageRepository extends JpaRepository<MessageInfo, String> {
+//    List<MessageInfo> findAllByRecipientMobileNumberIn(List<String> recipientMobileNumbers);
+//}

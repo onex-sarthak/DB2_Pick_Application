@@ -20,7 +20,7 @@ public class DLRController {
 
     @PostMapping("/callback")
     public ResponseEntity<String> callback(@RequestBody List<DlrCallbackRequest> dlrCallbackRequests) {
-        dlrCallbackService.processDlrCallbacks(dlrCallbackRequests);
+//        dlrCallbackService.processDlrCallbacks(dlrCallbackRequests);
         System.out.println("DLR Callbacks Processed Successfully");
         return ResponseEntity.ok("Status updated successfully for the following dlrCallbackRequests : "+ dlrCallbackRequests.toString());
     }

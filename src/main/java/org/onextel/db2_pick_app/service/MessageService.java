@@ -4,8 +4,10 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.model.MessageInfo;
 import org.onextel.db2_pick_app.model.MessageStatus;
+import org.onextel.db2_pick_app.model.SmsTempOutLog;
 import org.onextel.db2_pick_app.repository.CustomMessageRepositoryImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,21 +107,21 @@ public class MessageService {
     //  Runnable class to process a batch of messages
     private class MessageBatchProcessor implements Runnable {
 
-        private final List<MessageInfo> batch;
+        private final List<PendingSmsDto> batch;
 
-        public MessageBatchProcessor(List<MessageInfo> batch) {
+        public MessageBatchProcessor(List<PendingSmsDto> batch) {
             this.batch = batch;
         }
 
-        private void updateMessageStatus(List<MessageInfo> messages) {
+        private void updateMessageStatus(List<PendingSmsDto> messages) {
             if (messages == null || messages.isEmpty()) {
                 return;
             }
 
             try {
                 String messageIds = messages.stream()
-                        .map(MessageInfo::getUniqueId)
-                        .collect(Collectors.joining(","));
+                .map(dto -> String.valueOf(dto.getSrNo()))
+                .collect(Collectors.joining(","));
                 log.info("Updating status to {} for {} ", MessageStatus.FAILED, messageIds);
                 customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, MessageStatus.FAILED);
             } catch (Exception e) {
@@ -167,7 +169,7 @@ public class MessageService {
             log.info("Polling for pending messages (batch size: {})...", batchSize);
 
             // Use repository to fetch pending messages
-            List<MessageInfo> messages = customMessageRepositoryImpl.fetchAndUpdatePendingMessagesBatch(batchSize);
+            List<PendingSmsDto> messages = customMessageRepositoryImpl.fetchAndUpdatePendingMessagesBatch(batchSize);
 
             if (messages.isEmpty()) {
                 log.info("No pending messages found");
