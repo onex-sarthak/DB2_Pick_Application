@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 public class CPaaSIntegrationService {
     private final WebClient webClient;
 
-    @Value("${api.auth.token:sCYmf0y9}")
+    @Value("${api.key:sCYmf0y9}")
     private String apiAuthToken;
 
 
@@ -84,7 +84,8 @@ public class CPaaSIntegrationService {
                 smsSenderId,
                 message.getDestination(),
                 message.getMessage(),
-                String.valueOf(message.getSrNo())
+                String.valueOf(message.getSrNo()),
+                message.getTemplateId()
         );
     }
 }

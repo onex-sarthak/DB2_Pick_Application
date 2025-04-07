@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class DeliveryUpdateDto {
     private Long srNo;
-    private String deliveryStatus;
+    private String dlrStatus;
     private String deliveryCode;
     private LocalDateTime deliveryTime;
 }
