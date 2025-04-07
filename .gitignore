@@ -17,6 +17,9 @@
 # Ignore logs
 *.log
 
+# Ignroe logs folder
+/logs/
+
 # Ignore temporary files
 *.tmp
 *.temp
