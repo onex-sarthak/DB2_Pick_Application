@@ -7,7 +7,7 @@ batch:
     
 message:
   batch:
-    size: 1
+    size: 1000
   polling:
     interval: 10
     

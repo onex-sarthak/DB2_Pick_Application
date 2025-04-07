@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -23,33 +24,56 @@ public class DlrCallbackService {
 
     private final JdbcTemplate jdbcTemplate;
 
-    private static final int BATCH_SIZE = 50;
+    private static final int BATCH_SIZE = 5;
     private static final int TIMEOUT_SECONDS = 60;
 
     private final List<DlrCallbackRequestDto> batchBuffer = Collections.synchronizedList(new ArrayList<>());
+
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> scheduledFlush;
 
     public DlrCallbackService(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-
-        // Schedule batch flush every 60 seconds
-        scheduler.scheduleAtFixedRate(this::flushBatch, TIMEOUT_SECONDS, TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
+    /**
+     * Called from controller when DLR callback is received
+     */
     public void addToBatch(DlrCallbackRequestDto request) {
         synchronized (batchBuffer) {
             batchBuffer.add(request);
 
             if (batchBuffer.size() >= BATCH_SIZE) {
-                flushBatch();
+                log.info("Batch buffer is full, flushing batch");
+                flushBatch(); // Immediate flush
+            } else if (batchBuffer.size() == 1) {
+                // First entry in an empty batch — start/reset timer
+                scheduleNextFlush();
             }
         }
+    }
+
+    /**
+     * Resets the timer to flush after TIMEOUT_SECONDS
+     */
+    private void scheduleNextFlush() {
+        if (scheduledFlush != null && !scheduledFlush.isCancelled()) {
+            scheduledFlush.cancel(false);
+        }
+
+        scheduledFlush = scheduler.schedule(this::flushBatchDueToTimer, TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    }
+
+    private void flushBatchDueToTimer() {
+        log.info("Flush triggered by timer after {} seconds", TIMEOUT_SECONDS);
+        flushBatch();
     }
 
     private void flushBatch() {
         List<DlrCallbackRequestDto> toProcess;
         synchronized (batchBuffer) {
             if (batchBuffer.isEmpty()) return;
+
             toProcess = new ArrayList<>(batchBuffer);
             batchBuffer.clear();
         }
@@ -57,9 +81,12 @@ public class DlrCallbackService {
         try {
             processBatch(toProcess);
         } catch (Exception e) {
-            log.error("Batch processing failed, starting fault isolation.", e);
+            log.error("Batch processing failed, attempting fault isolation...", e);
             splitAndRetryBatch(toProcess);
         }
+
+        // Reset the flush timer
+        scheduleNextFlush();
     }
 
     private void processBatch(List<DlrCallbackRequestDto> batch) throws SQLException {

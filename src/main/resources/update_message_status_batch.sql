@@ -1,5 +1,5 @@
 CREATE OR REPLACE PROCEDURE SMS_SCHEMA.UPDATE_SMS_STATUS_BATCH(
-    IN SR_NOS VARCHAR(10000),  -- Comma-separated list of SR_NO values
+    IN SR_NOS VARCHAR(32000),  -- Comma-separated list of SR_NO values
     IN NEW_STATUS INTEGER      -- New status value to set
 )
     LANGUAGE SQL

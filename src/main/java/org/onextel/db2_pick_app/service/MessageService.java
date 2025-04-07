@@ -125,7 +125,7 @@ public class MessageService {
                 log.info("Updating status to {} for {} ", MessageStatus.FAILED, messageIds);
                 customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, MessageStatus.FAILED);
             } catch (Exception e) {
-                log.error("Error updating message status", e);
+                log.error("Error updating message status for failed messages", e);
             }
         }
 
@@ -139,6 +139,7 @@ public class MessageService {
 
                 // Update message status based on result
                 if(Boolean.FALSE.equals(response)) {
+                    log.error("Error in calling jsmslist api");
                     updateMessageStatus(batch); // 3 = Failed
                 }
             } catch (Throwable e) {
