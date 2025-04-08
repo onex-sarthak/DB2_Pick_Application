@@ -3,7 +3,7 @@ package org.onextel.db2_pick_app.controller;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.DlrCallbackRequestDto;
-import org.onextel.db2_pick_app.service.DlrCallbackService;
+import org.onextel.db2_pick_app.service.dlr.DlrCallbackService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
