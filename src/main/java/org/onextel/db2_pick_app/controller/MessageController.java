@@ -19,7 +19,7 @@ public class MessageController {
     @PostMapping("/update-status")
     public ResponseEntity<String> updateStatus(@RequestBody List<String> ids) {
         try {
-            messageService.resetMessageStatus(ids);
+            messageService.resetMessageStatusToZero(ids);
             return ResponseEntity.ok("Status updated successfully for given ids : "+ids);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error updating status: " + e.getMessage());

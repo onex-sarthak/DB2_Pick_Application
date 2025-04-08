@@ -1,63 +1,56 @@
 package org.onextel.db2_pick_app.repository;
 
-import jakarta.persistence.*;
 import lombok.extern.slf4j.Slf4j;
-import org.onextel.db2_pick_app.model.MessageInfo;
+import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.model.MessageStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
+
 @Repository
 public class CustomMessageRepositoryImpl implements CustomMessageRepository {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final JdbcTemplate jdbcTemplate;
 
-    @Override
-//    @Transactional()  -> this is not required as there is only one thread executing this, and also we are using a stored procedure
-    public List<MessageInfo> fetchPendingMessagesBatch(int batchSize) {
-        Query query = entityManager.createNativeQuery("CALL SMS_SCHEMA.FETCH_PENDING_MESSAGES(:BATCH_SIZE)", MessageInfo.class);
-        query.setParameter("BATCH_SIZE", batchSize);
-        return query.getResultList();
+    public CustomMessageRepositoryImpl(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     @Transactional
-    public void updateStatusFlags(List<String> ids) {
-        Query query = entityManager.createQuery("UPDATE MessageInfo m SET m.statusFlag = '1' WHERE m.uniqueId IN :ids");
-        query.setParameter("ids", ids);
-        query.executeUpdate();
+    public void updateMessageStatusBatch(String srNos, MessageStatus newStatus) {
+        jdbcTemplate.update("CALL SMS.UPDATE_SMS_STATUS_BATCH(?, ?)",
+                srNos, newStatus.getDbValue());
     }
 
-    @Override
     @Transactional
-    public void updateMessageStatusBatch(String uniqueIds, MessageStatus newStatus) {
-        Query query = entityManager.createNativeQuery("CALL SMS_SCHEMA.UPDATE_MESSAGE_STATUS_BATCH(:UNIQUE_IDS , :NEW_STATUS)");
-        query.setParameter("UNIQUE_IDS", uniqueIds);
-        query.setParameter("NEW_STATUS", newStatus.getDbValue());
-        query.executeUpdate();
+    @Override
+    public List<PendingSmsDto> fetchAndUpdatePendingMessagesBatch(int batchSize) {
+        String sql = "CALL SMS.FETCH_AND_UPDATE_PENDING_SMS_BATCH(?)";
+        List<PendingSmsDto> result = jdbcTemplate.query(sql, new Object[]{batchSize}, new PendingSmsRowMapper());
+        log.info("Fetched {} pending SMS records", result.size()); // Log the count
+        return result;
     }
 
-    @Override
-    @Transactional
-    public List<MessageInfo> fetchAndUpdatePendingMessagesBatch(int batchSize) {
-        try {
-            StoredProcedureQuery query = entityManager.createStoredProcedureQuery(
-                    "SMS_SCHEMA.PROCESS_SMS_BATCH",
-                    MessageInfo.class);
-
-            query.registerStoredProcedureParameter("BATCH_SIZE", Integer.class, ParameterMode.IN);
-            query.setParameter("BATCH_SIZE", batchSize);
-
-            // This handles both the call and result set properly
-            return query.getResultList();
-        } catch (Exception e) {
-            throw new RuntimeException("Error executing stored procedure", e);
+    private static class PendingSmsRowMapper implements RowMapper<PendingSmsDto> {
+        @Override
+        public PendingSmsDto mapRow(ResultSet rs, int rowNum) throws SQLException {
+            PendingSmsDto dto = new PendingSmsDto();
+            dto.setSrNo(rs.getLong("SR_NO"));
+            dto.setDestination(rs.getString("DESTINATION"));
+            dto.setMessage(rs.getString("MESSAGE"));
+            dto.setTemplateId(rs.getString("TEMPLATE_ID"));
+            dto.setSmsType(rs.getString("SMS_TYPE"));
+            dto.setStatus(rs.getInt("STATUS"));
+            return dto;
         }
     }
-
 }

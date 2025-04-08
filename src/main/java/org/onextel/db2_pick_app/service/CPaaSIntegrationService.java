@@ -1,8 +1,9 @@
 package org.onextel.db2_pick_app.service;
 
+import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.dto.SmsRequest;
 import org.onextel.db2_pick_app.model.MessageInfo;
-import org.onextel.db2_pick_app.repository.MessageRepository;
+//import org.onextel.db2_pick_app.repository.MessageRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 public class CPaaSIntegrationService {
     private final WebClient webClient;
 
-    @Value("${api.auth.token:sCYmf0y9}")
+    @Value("${api.key:sCYmf0y9}")
     private String apiAuthToken;
 
 
@@ -37,9 +38,9 @@ public class CPaaSIntegrationService {
         this.webClient = webClientBuilder.baseUrl("https://api.smsc.ai").build();
     }
 
-    public Mono<Boolean> sendMessagesInBatch(List<MessageInfo> messages) {
+    public Mono<Boolean> sendMessagesInBatch(List<PendingSmsDto> messages) {
         String messageIdString = messages.stream()
-                .map(MessageInfo::getUniqueId)
+                .map(dto -> String.valueOf(dto.getSrNo()))
                 .collect(Collectors.joining(","));
 
         log.info("Processing batch of {} messages with ids: {}", messages.size(), messageIdString);
@@ -78,12 +79,13 @@ public class CPaaSIntegrationService {
 
 
 
-    private SmsRequest.SmsDetail createSmsDetail(MessageInfo message) {
+    private SmsRequest.SmsDetail createSmsDetail(PendingSmsDto message) {
         return new SmsRequest.SmsDetail(
                 smsSenderId,
-                message.getRecipientMobileNumber(),
-                message.getMessageContent(),
-                message.getUniqueId()
+                message.getDestination(),
+                message.getMessage(),
+                String.valueOf(message.getSrNo()),
+                message.getTemplateId()
         );
     }
 }

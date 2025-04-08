@@ -1,25 +1,26 @@
-CREATE OR REPLACE PROCEDURE SMS_SCHEMA.FETCH_PENDING_MESSAGES(
-    IN BATCH_SIZE INTEGER
-)
-LANGUAGE SQL
-SPECIFIC FETCH_PENDING_MESSAGES
-RESULT SETS 1
-BEGIN
-    -- Declare cursor
-    DECLARE message_cursor CURSOR WITH RETURN FOR
-    SELECT * FROM FINAL TABLE (
-        UPDATE (
-            SELECT *
-            FROM SMS_SCHEMA.MESSAGE_INFO
-            WHERE STATUS_FLAG = '0'
-            ORDER BY TIMESTAMP ASC
-            FETCH FIRST BATCH_SIZE ROWS ONLY
-        )
-        SET STATUS_FLAG = '1'
-    );
-    -- Set lock wait timeout to prevent deadlocks
-    SET CURRENT LOCK TIMEOUT 10;
-
-        -- Open the cursor
-    OPEN message_cursor;
-END;
+-- This is no longer needed and used
+-- CREATE OR REPLACE PROCEDURE SMS_SCHEMA.FETCH_PENDING_MESSAGES(
+--     IN BATCH_SIZE INTEGER
+-- )
+-- LANGUAGE SQL
+-- SPECIFIC FETCH_PENDING_MESSAGES
+-- RESULT SETS 1
+-- BEGIN
+--     -- Declare cursor
+--     DECLARE message_cursor CURSOR WITH RETURN FOR
+--     SELECT * FROM FINAL TABLE (
+--         UPDATE (
+--             SELECT *
+--             FROM SMS_SCHEMA.MESSAGE_INFO
+--             WHERE STATUS_FLAG = '0'
+--             ORDER BY TIMESTAMP ASC
+--             FETCH FIRST BATCH_SIZE ROWS ONLY
+--         )
+--         SET STATUS_FLAG = '1'
+--     );
+--     -- Set lock wait timeout to prevent deadlocks
+--     SET CURRENT LOCK TIMEOUT 10;
+--
+--         -- Open the cursor
+--     OPEN message_cursor;
+-- END;

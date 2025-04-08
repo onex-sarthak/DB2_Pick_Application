@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.model.MessageInfo;
 import org.onextel.db2_pick_app.model.MessageStatus;
 import org.onextel.db2_pick_app.repository.CustomMessageRepositoryImpl;
@@ -105,25 +106,25 @@ public class MessageService {
     //  Runnable class to process a batch of messages
     private class MessageBatchProcessor implements Runnable {
 
-        private final List<MessageInfo> batch;
+        private final List<PendingSmsDto> batch;
 
-        public MessageBatchProcessor(List<MessageInfo> batch) {
+        public MessageBatchProcessor(List<PendingSmsDto> batch) {
             this.batch = batch;
         }
 
-        private void updateMessageStatus(List<MessageInfo> messages) {
+        private void updateMessageStatus(List<PendingSmsDto> messages) {
             if (messages == null || messages.isEmpty()) {
                 return;
             }
 
             try {
                 String messageIds = messages.stream()
-                        .map(MessageInfo::getUniqueId)
-                        .collect(Collectors.joining(","));
+                .map(dto -> String.valueOf(dto.getSrNo()))
+                .collect(Collectors.joining(","));
                 log.info("Updating status to {} for {} ", MessageStatus.FAILED, messageIds);
                 customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, MessageStatus.FAILED);
             } catch (Exception e) {
-                log.error("Error updating message status", e);
+                log.error("Error updating message status for failed messages", e);
             }
         }
 
@@ -137,6 +138,7 @@ public class MessageService {
 
                 // Update message status based on result
                 if(Boolean.FALSE.equals(response)) {
+                    log.error("Error in calling jsmslist api");
                     updateMessageStatus(batch); // 3 = Failed
                 }
             } catch (Throwable e) {
@@ -167,7 +169,7 @@ public class MessageService {
             log.info("Polling for pending messages (batch size: {})...", batchSize);
 
             // Use repository to fetch pending messages
-            List<MessageInfo> messages = customMessageRepositoryImpl.fetchAndUpdatePendingMessagesBatch(batchSize);
+            List<PendingSmsDto> messages = customMessageRepositoryImpl.fetchAndUpdatePendingMessagesBatch(batchSize);
 
             if (messages.isEmpty()) {
                 log.info("No pending messages found");
@@ -198,7 +200,7 @@ public class MessageService {
 
     //  Method to reset message status (for error recovery or testing)
     @Transactional
-    public void resetMessageStatus(List<String> ids) {
+    public void resetMessageStatusToZero(List<String> ids) {
         if (ids == null || ids.isEmpty()) {
             return;
         }
