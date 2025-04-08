@@ -15,7 +15,7 @@ import java.util.concurrent.Executor;
 public class DlrCallbackService {
 
     private static final int BATCH_SIZE = 1000;
-    private static final long TIMEOUT_MILLISECONDS = 50;
+    private static final long TIMEOUT_MILLISECONDS = 1000;
 
     private final DlrCallbackBuffer buffer;
     private final DlrBatchScheduler scheduler;

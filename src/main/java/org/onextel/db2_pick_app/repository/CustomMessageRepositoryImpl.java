@@ -24,25 +24,6 @@ public class CustomMessageRepositoryImpl implements CustomMessageRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-//    @Override
-//    public List<PendingSmsDto> fetchPendingMessagesBatch(int batchSize) {
-//        String sql = "SELECT SR_NO, DEST AS destination, MESSAGE, TEMPLATE_ID as templateId, " +
-//                "SMS_TYPE as smsType, STATUS FROM TABLE(SMS.FETCH_PENDING_MESSAGES(?))";
-//
-//        return jdbcTemplate.query(sql, new PendingSmsRowMapper(), batchSize);
-//    }
-
-//    @Override
-//    @Transactional
-//    public void updateStatusFlags(List<String> ids) {
-//        if (ids.isEmpty()) return;
-//
-//        String sql = "UPDATE SMS.SMS_TEMP_OUT_LOG SET STATUS = 1 WHERE SR_NO IN (" +
-//                String.join(",", Collections.nCopies(ids.size(), "?")) + ")";
-//
-//        jdbcTemplate.update(sql, ids.toArray());
-//    }
-
     @Override
     @Transactional
     public void updateMessageStatusBatch(String srNos, MessageStatus newStatus) {
