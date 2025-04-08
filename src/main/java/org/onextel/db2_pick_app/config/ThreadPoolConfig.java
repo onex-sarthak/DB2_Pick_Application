@@ -1,6 +1,7 @@
 package org.onextel.db2_pick_app.config;
 
 
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,9 +16,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Configuration
 @EnableScheduling
 @EnableAsync
+@Slf4j
 public class ThreadPoolConfig {
-
-    private static final Logger logger = LoggerFactory.getLogger(ThreadPoolConfig.class);
 
     @Value("${thread.pool.core.size:2}")
     private int corePoolSize;
@@ -44,7 +44,7 @@ public class ThreadPoolConfig {
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.initialize();
 
-        logger.info("Created message processor thread pool with core size: {}, max size: {}, queue capacity: {}",
+        log.info("Created message processor thread pool with core size: {}, max size: {}, queue capacity: {}",
                 corePoolSize, maxPoolSize, queueCapacity);
 
         return executor;

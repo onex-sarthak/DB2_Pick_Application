@@ -24,7 +24,7 @@ public class DlrCallbackService {
 
     private final JdbcTemplate jdbcTemplate;
 
-    private static final int BATCH_SIZE = 5;
+    private static final int BATCH_SIZE = 1000;
     private static final int TIMEOUT_SECONDS = 60;
 
     private final List<DlrCallbackRequestDto> batchBuffer = Collections.synchronizedList(new ArrayList<>());
