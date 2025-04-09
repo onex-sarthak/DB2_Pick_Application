@@ -62,7 +62,7 @@ public class CPaaSIntegrationService {
                     HttpMethod.POST,
                     null, // No path variables
                     requestBody
-            );
+            ).block();
 
             log.info("API response received successfully: {}", responseEntity.getBody());
             return true;
@@ -70,32 +70,6 @@ public class CPaaSIntegrationService {
             log.error("Error occurred while sending messages in batch: {}", ex.getMessage(), ex);
             return false;
         }
-
-
-
-//        return webClient.post()
-//                .uri("/api/jsmslist")
-//                .bodyValue(requestBody)
-//                .retrieve()
-//                .onStatus(HttpStatusCode::is4xxClientError, response -> {
-//                    log.error("Client error (4xx) occurred: {}", response.statusCode());
-//                    return response.bodyToMono(String.class)
-//                            .doOnNext(body -> log.error("Response body: {}", body))
-//                            .then(Mono.error(new RuntimeException("4xx error: " + response.statusCode())));
-//                })
-//                .onStatus(HttpStatusCode::is5xxServerError, response -> {
-//                    log.error("Server error (5xx) occurred: {}", response.statusCode());
-//                    return response.bodyToMono(String.class)
-//                            .doOnNext(body -> log.error("Response body: {}", body))
-//                            .then(Mono.error(new RuntimeException("5xx error: " + response.statusCode())));
-//                })
-//                .bodyToMono(String.class)
-//                .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(5))
-//                        .filter(throwable -> throwable instanceof WebClientResponseException))
-//                .doOnSuccess(response -> log.info("API response received successfully: {}", response))
-//                .doOnError(WebClientResponseException.class, ex -> log.error("Error response: {}", ex.getResponseBodyAsString()))
-//                .map(response -> true) // Convert response to boolean
-//                .onErrorReturn(false); // Return false if an error occurs
     }
 
 
