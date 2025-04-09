@@ -69,7 +69,7 @@ public class RestWebClient {
                     .doOnError(WebClientResponseException.class, ex -> System.err.println("Error: " + ex.getResponseBodyAsString()))
                     .block();
         } catch (Exception ex) {
-            System.err.println("Exception occurred: " + ex.getMessage());
+            log.error("Exception occurred: {}", ex.getMessage());
             throw ex;
         }
     }

@@ -3,22 +3,21 @@ package org.onextel.db2_pick_app.service;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.model.MessageStatus;
-import org.onextel.db2_pick_app.repository.CustomMessageRepositoryImpl;
+import org.onextel.db2_pick_app.repository.CustomMessageRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
 @Slf4j
 public class MessageService {
 
@@ -41,7 +40,7 @@ public class MessageService {
     @Value("${thread.pool.queue.capacity:100}")
     private int queueCapacity;
 
-    private final CustomMessageRepositoryImpl customMessageRepositoryImpl;
+    private final CustomMessageRepository customMessageRepository;
     private final CPaaSIntegrationService cPaaSIntegrationService;
     private final JdbcTemplate jdbcTemplate;
 
@@ -55,10 +54,10 @@ public class MessageService {
 
     @Autowired
     public MessageService(
-            CustomMessageRepositoryImpl customMessageRepositoryImpl,
+            CustomMessageRepository customMessageRepository,
             CPaaSIntegrationService cPaaSIntegrationService,
             JdbcTemplate jdbcTemplate) {
-        this.customMessageRepositoryImpl = customMessageRepositoryImpl;
+        this.customMessageRepository = customMessageRepository;
         this.cPaaSIntegrationService = cPaaSIntegrationService;
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -120,7 +119,7 @@ public class MessageService {
                 .map(dto -> String.valueOf(dto.getSrNo()))
                 .collect(Collectors.joining(","));
                 log.info("Updating status to {} for {} ", MessageStatus.FAILED, messageIds);
-                customMessageRepositoryImpl.updateMessageStatusBatch(messageIds, MessageStatus.FAILED);
+                customMessageRepository.updateMessageStatusBatch(messageIds, MessageStatus.FAILED);
             } catch (Exception e) {
                 log.error("Error updating message status for failed messages", e);
             }
@@ -167,7 +166,7 @@ public class MessageService {
             log.info("Polling for pending messages (batch size: {})...", batchSize);
 
             // Use repository to fetch pending messages
-            List<PendingSmsDto> messages = customMessageRepositoryImpl.fetchAndUpdatePendingMessagesBatch(batchSize);
+            List<PendingSmsDto> messages = customMessageRepository.fetchAndUpdatePendingMessagesBatch(batchSize);
 
             if (messages.isEmpty()) {
                 log.info("No pending messages found");
@@ -201,7 +200,7 @@ public class MessageService {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        customMessageRepositoryImpl.updateMessageStatusBatch(String.join(",", ids), MessageStatus.PENDING);
+        customMessageRepository.updateMessageStatusBatch(String.join(",", ids), MessageStatus.PENDING);
         log.info("Reset status for {} messages", ids.size());
     }
 
