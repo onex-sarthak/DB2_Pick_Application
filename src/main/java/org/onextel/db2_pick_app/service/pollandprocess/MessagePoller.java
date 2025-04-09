@@ -72,7 +72,7 @@ public class MessagePoller implements Runnable {
     private boolean pollAndSubmit() {
         try {
             log.info("Polling for messages (batch size: {})", batchSize);
-            List<PendingSmsDto> messages = customMessageRepository.fetchAndUpdatePendingMessagesBatch(batchSize);
+            List<PendingSmsDto> messages = customMessageRepository.fetchPendingMessagesBatch(batchSize);
 
             if (messages.isEmpty()) {
                 log.debug("No pending messages found.");
