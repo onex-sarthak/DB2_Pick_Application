@@ -54,19 +54,19 @@ public class RestWebClient {
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, response -> {
                         return response.bodyToMono(String.class)
-                                .doOnNext(bodyContent -> log.error("4xx Error: " + bodyContent))
+                                .doOnNext(bodyContent -> log.error("4xx Error: {}", bodyContent))
                                 .then(Mono.error(new RuntimeException("Client error: " + response.statusCode())));
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, response -> {
                         return response.bodyToMono(String.class)
-                                .doOnNext(bodyContent -> System.err.println("5xx Error: " + bodyContent))
+                                .doOnNext(bodyContent -> log.error("5xx Error: {}", bodyContent))
                                 .then(Mono.error(new RuntimeException("Server error: " + response.statusCode())));
                     })
                     .toEntity(responseClassType)
                     .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(5))
                             .filter(throwable -> throwable instanceof WebClientResponseException))
-                    .doOnSuccess(response -> System.out.println("Success: " + response.getBody()))
-                    .doOnError(WebClientResponseException.class, ex -> System.err.println("Error: " + ex.getResponseBodyAsString()))
+                    .doOnSuccess(response -> log.info("Success: {}", response.getBody()))
+                    .doOnError(WebClientResponseException.class, ex -> log.error("Error: {}", ex.getResponseBodyAsString()))
                     .block();
         } catch (Exception ex) {
             log.error("Exception occurred: {}", ex.getMessage());

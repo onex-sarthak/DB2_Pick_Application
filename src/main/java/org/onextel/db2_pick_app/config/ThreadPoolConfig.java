@@ -11,7 +11,8 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Configuration
 @EnableScheduling
@@ -19,13 +20,37 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Slf4j
 public class ThreadPoolConfig {
 
-    
+
+    @Value("${thread.pool.core.size:3}")
+    private int corePoolSize;
+
+    @Value("${thread.pool.max.size:5}")
+    private int maxPoolSize;
+
+    @Value("${thread.pool.keep.alive.seconds:60}")
+    private int keepAliveSeconds;
+
+    @Value("${thread.pool.queue.capacity:100}")
+    private int queueCapacity;
+
+    private final AtomicInteger threadCounter = new AtomicInteger(0);
+
     @Bean(name = "messageProcessorExecutor")
-    public ThreadPoolTaskExecutor messageProcessorExecutor(
-            @Value("${thread.pool.core.size:2}") int corePoolSize,
-            @Value("${thread.pool.max.size:2}") int maxPoolSize,
-            @Value("${thread.pool.queue.capacity:100}") int queueCapacity) {
-        return createThreadPool(corePoolSize, maxPoolSize, queueCapacity, "MessageProcessor-");
+    public ThreadPoolExecutor messageProcessorExecutor() {
+        return new ThreadPoolExecutor(
+                corePoolSize,
+                maxPoolSize,
+                keepAliveSeconds,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(queueCapacity),
+                r -> new Thread(r, "message-processor-" + threadCounter.getAndIncrement()),
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+    }
+
+    @Bean(name = "messagePollingExecutor")
+    public ExecutorService messagePollingExecutor() {
+        return Executors.newSingleThreadExecutor(r -> new Thread(r, "db-poller"));
     }
 
     @Bean(name = "dlrCallbackExecutor")

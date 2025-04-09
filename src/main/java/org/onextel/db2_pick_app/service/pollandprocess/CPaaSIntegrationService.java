@@ -1,20 +1,14 @@
-package org.onextel.db2_pick_app.service;
+package org.onextel.db2_pick_app.service.pollandprocess;
 
 import org.onextel.db2_pick_app.client.RestWebClient;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.dto.SmsRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.SmsResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
-import reactor.util.retry.Retry;
 
-import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
