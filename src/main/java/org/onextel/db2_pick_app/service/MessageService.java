@@ -2,10 +2,8 @@ package org.onextel.db2_pick_app.service;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
-import org.onextel.db2_pick_app.model.MessageInfo;
 import org.onextel.db2_pick_app.model.MessageStatus;
 import org.onextel.db2_pick_app.repository.CustomMessageRepositoryImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -134,7 +132,7 @@ public class MessageService {
                 log.info("Processing batch of {} messages by thread {}", batch.size(), Thread.currentThread().getName());
 
                 // Process the batch using the CPaaS integration service
-                Boolean response = cPaaSIntegrationService.sendMessagesInBatch(batch).block();
+                Boolean response = cPaaSIntegrationService.sendMessagesInBatch(batch);
 
                 // Update message status based on result
                 if(Boolean.FALSE.equals(response)) {
@@ -199,7 +197,6 @@ public class MessageService {
 
 
     //  Method to reset message status (for error recovery or testing)
-    @Transactional
     public void resetMessageStatusToZero(List<String> ids) {
         if (ids == null || ids.isEmpty()) {
             return;
