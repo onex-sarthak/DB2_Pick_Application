@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.model.MessageStatus;
 import org.onextel.db2_pick_app.repository.CustomMessageRepository;
+import org.onextel.db2_pick_app.transformer.PendingSmsConverter;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -44,6 +45,20 @@ public class DbStatusUpdater implements StatusUpdater {
             customMessageRepository.updateMessageStatusBatch(idString, MessageStatus.PENDING);
         } catch (Exception e) {
             log.error("Error resetting status to PENDING", e);
+        }
+    }
+
+    @Override
+    public void markAsSucceeded(List<PendingSmsDto> messages) {
+        if (messages == null || messages.isEmpty()) return;
+        try{
+            String messageIds = PendingSmsConverter.convertToCommaSeparatedSrNos(messages);
+            log.info("Updating status to {} for {}", MessageStatus.PROCESSING, messageIds);
+
+            // Update the status in the database
+            customMessageRepository.updateMessageStatusBatch(messageIds, MessageStatus.PROCESSING);
+        } catch (Exception e) {
+            log.error("Error updating message status to SUCCESS", e);
         }
     }
 }

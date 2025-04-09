@@ -40,6 +40,16 @@ public class CustomMessageRepositoryImpl implements CustomMessageRepository {
         return result;
     }
 
+
+    @Transactional
+    @Override
+    public List<PendingSmsDto> fetchPendingMessagesBatch(int batchSize) {
+        String sql = "CALL SMS.GET_SMS_BATCH(?)";
+        List<PendingSmsDto> result = jdbcTemplate.query(sql, new Object[]{batchSize}, new PendingSmsRowMapper());
+        log.info("Fetched {} pending SMS records", result.size());
+        return result;
+    }
+
     private static class PendingSmsRowMapper implements RowMapper<PendingSmsDto> {
         @Override
         public PendingSmsDto mapRow(ResultSet rs, int rowNum) throws SQLException {

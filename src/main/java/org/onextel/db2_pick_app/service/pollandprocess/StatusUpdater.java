@@ -8,4 +8,5 @@ import java.util.List;
 public interface StatusUpdater {
     void markAsFailed(List<PendingSmsDto> messages);
     void resetToPending(List<String> ids);
+    void markAsSucceeded(List<PendingSmsDto> messages);
 }
