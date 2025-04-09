@@ -70,7 +70,7 @@ public class RestWebClient {
                 .toEntity(responseClassType)
                 .retryWhen(Retry.fixedDelay(maxRetryAttempts, retryDelay)
                         .filter(throwable -> throwable instanceof WebClientResponseException))
-                .doOnSuccess(response -> log.info("Success: {}", response.getBody()))
+                .doOnSuccess(response -> log.info("API Response Received Successfully" ))
                 .doOnError(WebClientResponseException.class, ex -> log.error("Error: {}", ex.getResponseBodyAsString()));
     }
 }
