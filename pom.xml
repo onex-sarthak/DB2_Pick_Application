@@ -119,6 +119,12 @@
             <version>3.5.0</version> <!-- Use the latest version -->
         </dependency>
 
+        <dependency>
+            <groupId>org.rocksdb</groupId>
+            <artifactId>rocksdbjni</artifactId>
+            <version>7.10.2</version> <!-- Use the latest stable version -->
+        </dependency>
+
 
     </dependencies>
 

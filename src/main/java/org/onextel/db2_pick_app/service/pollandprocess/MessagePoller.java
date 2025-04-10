@@ -85,9 +85,9 @@ public class MessagePoller implements Runnable {
             log.info("Submitting {} messages", messages.size());
 
             //TODO : write to rocks db <key : id, value : messages>
-            
 
-            //TODO : Update status to 1 in db2 for all messages
+
+            //Update status to 1 in db2 for all messages
             statusUpdater.markAsSucceeded(messages);
 
 
