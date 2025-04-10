@@ -10,4 +10,6 @@ public interface CustomMessageRepository {
     void updateMessageStatusBatch(String uniqueIds, MessageStatus newStatus);
 
     List<PendingSmsDto> fetchAndUpdatePendingMessagesBatch(int batchSize);
+
+    List<PendingSmsDto> fetchPendingMessagesBatch(int batchSize);
 }

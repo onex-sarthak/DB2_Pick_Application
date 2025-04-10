@@ -1,7 +1,7 @@
 package org.onextel.db2_pick_app.controller;
 
 import lombok.AllArgsConstructor;
-import org.onextel.db2_pick_app.service.MessageService;
+import org.onextel.db2_pick_app.service.pollandprocess.MessageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
