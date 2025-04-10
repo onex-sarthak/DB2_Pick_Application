@@ -5,6 +5,7 @@ import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.dto.SmsRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.SmsResponse;
+import org.onextel.db2_pick_app.transformer.PendingSmsConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
 
 
 @Service
@@ -29,21 +31,22 @@ public class CPaaSIntegrationService {
     @Value("${sms.api.base.url:https://api.smsc.ai}")
     private String baseUrl;
 
+    PendingSmsConverter pendingSmsConverter;
 
-    public CPaaSIntegrationService(RestWebClient restWebClient) {
+
+    public CPaaSIntegrationService(RestWebClient restWebClient, PendingSmsConverter pendingSmsConverter) {
         this.restWebClient = restWebClient;
+        this.pendingSmsConverter = pendingSmsConverter;
     }
 
     public Boolean sendMessagesInBatch(List<PendingSmsDto> messages) {
-        String messageIdString = messages.stream()
-                .map(dto -> String.valueOf(dto.getSrNo()))
-                .collect(Collectors.joining(","));
+//        String messageIdString = messages.stream()
+//                .map(dto -> String.valueOf(dto.getSrNo()))
+//                .collect(Collectors.joining(","));
 
-        log.info("Processing batch of {} messages with ids: {}", messages.size(), messageIdString);
+//        log.info("Processing batch of {} messages with ids: {}", messages.size(), messageIdString);
 
-        List<SmsRequest.SmsDetail> smsRequests = messages.stream()
-                .map(this::createSmsDetail)
-                .toList();
+        List<SmsRequest.SmsDetail> smsRequests = pendingSmsConverter.createSmsDetails(messages);
 
         SmsRequest requestBody = new SmsRequest(apiAuthToken, smsRequests);
         log.info("Sending request: {}", requestBody);
@@ -74,13 +77,5 @@ public class CPaaSIntegrationService {
 
 
 
-    private SmsRequest.SmsDetail createSmsDetail(PendingSmsDto message) {
-        return new SmsRequest.SmsDetail(
-                smsSenderId,
-                message.getDestination(),
-                message.getMessage(),
-                String.valueOf(message.getSrNo()),
-                message.getTemplateId()
-        );
-    }
+
 }
