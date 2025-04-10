@@ -20,6 +20,9 @@
 # Ignroe logs folder
 /logs/
 
+#Ignore RocksDB data
+/rocksdb-data/
+
 # Ignore temporary files
 *.tmp
 *.temp
