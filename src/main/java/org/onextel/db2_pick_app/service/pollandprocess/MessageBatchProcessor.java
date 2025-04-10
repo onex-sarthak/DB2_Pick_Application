@@ -29,7 +29,6 @@ public class MessageBatchProcessor implements Runnable {
     public void run() {
         try {
             log.info("Processing batch of {} messages on thread {}", batch.size(), Thread.currentThread().getName());
-            statusUpdater.markAsSucceeded(batch);
             boolean success = messageSender.sendBatch(batch);
 
             if (!success) {

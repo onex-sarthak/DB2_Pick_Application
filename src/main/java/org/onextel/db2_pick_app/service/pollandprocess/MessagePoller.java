@@ -23,15 +23,18 @@ public class MessagePoller implements Runnable {
     private final CustomMessageRepository customMessageRepository;
     private final MessageBatchProcessorFactory processorFactory;
     private final ThreadPoolExecutor executor;
+    private final StatusUpdater statusUpdater;
 
     private volatile boolean running = true;
 
     public MessagePoller(CustomMessageRepository customMessageRepository,
                          MessageBatchProcessorFactory processorFactory,
-                         ThreadPoolExecutor executor) {
+                         ThreadPoolExecutor executor,
+                         StatusUpdater statusUpdater) {
         this.customMessageRepository = customMessageRepository;
         this.processorFactory = processorFactory;
         this.executor = executor;
+        this.statusUpdater = statusUpdater;
     }
 
     public void stop() {
@@ -82,8 +85,11 @@ public class MessagePoller implements Runnable {
             log.info("Submitting {} messages", messages.size());
 
             //TODO : write to rocks db <key : id, value : messages>
+            
 
             //TODO : Update status to 1 in db2 for all messages
+            statusUpdater.markAsSucceeded(messages);
+
 
 
             Runnable task = processorFactory.create(messages);
