@@ -1,18 +1,24 @@
 package org.onextel.db2_pick_app.service.pollandprocess;
 
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.repository.CustomMessageRepository;
+import org.onextel.db2_pick_app.service.rocksdb.RocksDBHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 
 @Component
 @Slf4j
+
 public class MessagePoller implements Runnable {
+
+    Gson gson = new Gson();
 
     @Value("${message.polling.interval:10}")
     private int pollingIntervalSeconds;
@@ -24,17 +30,20 @@ public class MessagePoller implements Runnable {
     private final MessageBatchProcessorFactory processorFactory;
     private final ThreadPoolExecutor executor;
     private final StatusUpdater statusUpdater;
+    private final RocksDBHandler rocksDBHandler;
 
     private volatile boolean running = true;
 
     public MessagePoller(CustomMessageRepository customMessageRepository,
                          MessageBatchProcessorFactory processorFactory,
                          ThreadPoolExecutor executor,
-                         StatusUpdater statusUpdater) {
+                         StatusUpdater statusUpdater,
+                         RocksDBHandler rocksDBHandler) {
         this.customMessageRepository = customMessageRepository;
         this.processorFactory = processorFactory;
         this.executor = executor;
         this.statusUpdater = statusUpdater;
+        this.rocksDBHandler = rocksDBHandler;
     }
 
     public void stop() {
@@ -84,15 +93,14 @@ public class MessagePoller implements Runnable {
 
             log.info("Submitting {} messages", messages.size());
 
-            //TODO : write to rocks db <key : id, value : messages>
-
+            //write to rocks db <key : id, value : messages>
+            String id = UUID.randomUUID().toString();
+            rocksDBHandler.put(id , gson.toJson(messages));
 
             //Update status to 1 in db2 for all messages
             statusUpdater.markAsSucceeded(messages);
 
-
-
-            Runnable task = processorFactory.create(messages);
+            Runnable task = processorFactory.create(messages,id);
             executor.submit(task);
 
             return true;

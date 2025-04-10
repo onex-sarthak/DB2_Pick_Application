@@ -5,5 +5,5 @@ import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import java.util.List;
 
 public interface MessageSender {
-    boolean sendBatch(List<PendingSmsDto> batch);
+    boolean sendBatch(List<PendingSmsDto> batch, String id);
 }

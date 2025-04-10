@@ -3,6 +3,7 @@ package org.onextel.db2_pick_app.service.pollandprocess;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
+import org.onextel.db2_pick_app.service.rocksdb.RocksDBHandler;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,12 +13,17 @@ import java.util.List;
 @Slf4j
 public class CPaaSMessageSender implements MessageSender {
 
+    private final RocksDBHandler rocksDBHandler;
+
     private final CPaaSIntegrationService cPaaSIntegrationService;
 
     @Override
-    public boolean sendBatch(List<PendingSmsDto> batch) {
+    public boolean sendBatch(List<PendingSmsDto> batch, String id) {
         try {
-            return Boolean.TRUE.equals(cPaaSIntegrationService.sendMessagesInBatch(batch));
+            boolean result =  Boolean.TRUE.equals(cPaaSIntegrationService.sendMessagesInBatch(batch));
+            rocksDBHandler.delete(id);
+            return result;
+
         } catch (Exception e) {
             log.error("Exception occurred while sending message batch", e);
             return false;

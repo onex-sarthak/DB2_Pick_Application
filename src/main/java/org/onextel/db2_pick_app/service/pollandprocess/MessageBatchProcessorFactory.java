@@ -18,7 +18,7 @@ public class MessageBatchProcessorFactory {
         this.statusUpdater = statusUpdater;
     }
 
-    public Runnable create(List<PendingSmsDto> batch) {
-        return new MessageBatchProcessor(batch, messageSender, statusUpdater);
+    public Runnable create(List<PendingSmsDto> batch , String id) {
+        return new MessageBatchProcessor(batch, id, messageSender, statusUpdater);
     }
 }

@@ -9,18 +9,21 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Slf4j
-@Component
-@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+//@Component
+//@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class MessageBatchProcessor implements Runnable {
 
     private final List<PendingSmsDto> batch;
     private final MessageSender messageSender;
     private final StatusUpdater statusUpdater;
+    private final String id;
 
     public MessageBatchProcessor(List<PendingSmsDto> batch,
+                                 String id,
                                  MessageSender messageSender,
                                  StatusUpdater statusUpdater) {
         this.batch = batch;
+        this.id = id;
         this.messageSender = messageSender;
         this.statusUpdater = statusUpdater;
     }
@@ -29,7 +32,7 @@ public class MessageBatchProcessor implements Runnable {
     public void run() {
         try {
             log.info("Processing batch of {} messages on thread {}", batch.size(), Thread.currentThread().getName());
-            boolean success = messageSender.sendBatch(batch);
+            boolean success = messageSender.sendBatch(batch,id);
 
             if (!success) {
                 log.error("CPaaS call failed. Marking batch as FAILED.");
