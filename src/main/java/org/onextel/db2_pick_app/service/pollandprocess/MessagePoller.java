@@ -93,7 +93,7 @@ public class MessagePoller implements Runnable {
 
             log.info("Submitting {} messages", messages.size());
 
-            //write to rocks db <key : id, value : messages>
+            //TODO : write to rocks db <key : id, value : messages>
             String id = UUID.randomUUID().toString();
             rocksDBHandler.put(id , gson.toJson(messages));
 
