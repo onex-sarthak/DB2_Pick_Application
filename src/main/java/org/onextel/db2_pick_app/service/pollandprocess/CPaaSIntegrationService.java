@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.onextel.db2_pick_app.transformer.PendingSmsConverter.createSmsDetails;
 
 
 @Service
@@ -34,9 +35,8 @@ public class CPaaSIntegrationService {
     PendingSmsConverter pendingSmsConverter;
 
 
-    public CPaaSIntegrationService(RestWebClient restWebClient, PendingSmsConverter pendingSmsConverter) {
+    public CPaaSIntegrationService(RestWebClient restWebClient) {
         this.restWebClient = restWebClient;
-        this.pendingSmsConverter = pendingSmsConverter;
     }
 
     public Boolean sendMessagesInBatch(List<PendingSmsDto> messages) {
@@ -46,7 +46,7 @@ public class CPaaSIntegrationService {
 
 //        log.info("Processing batch of {} messages with ids: {}", messages.size(), messageIdString);
 
-        List<SmsRequest.SmsDetail> smsRequests = pendingSmsConverter.createSmsDetails(messages);
+        List<SmsRequest.SmsDetail> smsRequests = createSmsDetails(messages,smsSenderId);
 
         SmsRequest requestBody = new SmsRequest(apiAuthToken, smsRequests);
         log.info("Sending request: {}", requestBody);

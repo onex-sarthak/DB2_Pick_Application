@@ -12,13 +12,6 @@ import java.util.stream.Collectors;
 @Component
 public class PendingSmsConverter {
 
-    @Value("${api.key:sCYmf0y9}")
-    private String apiAuthToken;
-
-
-    @Value("${sms.sender.id:ONEXTEL}")
-    private String smsSenderId;
-
     /**
      * Converts a list of PendingSmsDto to a comma-separated string of srNo values.
      *
@@ -35,7 +28,7 @@ public class PendingSmsConverter {
                 .collect(Collectors.joining(",")); // Join with commas
     }
 
-    public  List<SmsRequest.SmsDetail> createSmsDetails(List<PendingSmsDto> messages) {
+    public static List<SmsRequest.SmsDetail> createSmsDetails(List<PendingSmsDto> messages, String smsSenderId) {
         if (messages == null ||  messages.isEmpty()) {
             return new ArrayList<>();
         }

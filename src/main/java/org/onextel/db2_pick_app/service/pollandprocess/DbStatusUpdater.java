@@ -4,11 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.model.MessageStatus;
 import org.onextel.db2_pick_app.repository.CustomMessageRepository;
-import org.onextel.db2_pick_app.transformer.PendingSmsConverter;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static org.onextel.db2_pick_app.transformer.PendingSmsConverter.convertToCommaSeparatedSrNos;
 
 @Slf4j
 @Service
@@ -52,7 +53,7 @@ public class DbStatusUpdater implements StatusUpdater {
     public void markAsSucceeded(List<PendingSmsDto> messages) {
         if (messages == null || messages.isEmpty()) return;
         try{
-            String messageIds = PendingSmsConverter.convertToCommaSeparatedSrNos(messages);
+            String messageIds = convertToCommaSeparatedSrNos(messages);
             log.info("Updating status to {} for {}", MessageStatus.PROCESSING, messageIds);
 
             // Update the status in the database
