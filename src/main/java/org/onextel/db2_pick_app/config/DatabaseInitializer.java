@@ -29,11 +29,11 @@ public class DatabaseInitializer {
     private void createStoredProcedures() {
         try {
             String fetchAndUpdatePendingSmsBatchSql = new String(Files.readAllBytes(Paths.get("/home/hemal/Documents/DB2_Pick_Application/src/main/resources/fetch_and_update_sms.sql")));
-//            String fetchPendingMessagesSql = new String(Files.readAllBytes(Paths.get("/home/hemal/Documents/DB2_Pick_Application/src/main/resources/fetch_pending_messages.sql")));
+            String fetchPendingMessagesSql = new String(Files.readAllBytes(Paths.get("/home/hemal/Documents/DB2_Pick_Application/src/main/resources/fetch_pending_messages.sql")));
             String updateSmsStatusBatchSql = new String(Files.readAllBytes(Paths.get("/home/hemal/Documents/DB2_Pick_Application/src/main/resources/update_message_status_batch.sql")));
 
-//            jdbcTemplate.execute(fetchPendingMessagesSql);
-//            log.info("Stored procedure FETCH_PENDING_MESSAGES created");
+            jdbcTemplate.execute(fetchPendingMessagesSql);
+            log.info("Stored procedure FETCH_PENDING_MESSAGES created");
 
 
             jdbcTemplate.execute(updateSmsStatusBatchSql);
