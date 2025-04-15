@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.repository.CustomMessageRepository;
-import org.onextel.db2_pick_app.service.rocksdb.RocksDBHandler;
+import org.onextel.db2_pick_app.service.rocksdb.RocksDBPollingHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +30,7 @@ public class MessagePoller implements Runnable {
     private final MessageBatchProcessorFactory processorFactory;
     private final ThreadPoolExecutor executor;
     private final StatusUpdater statusUpdater;
-    private final RocksDBHandler rocksDBHandler;
+    private final RocksDBPollingHandler rocksDBPollingHandler;
 
     private volatile boolean running = true;
 
@@ -38,12 +38,12 @@ public class MessagePoller implements Runnable {
                          MessageBatchProcessorFactory processorFactory,
                          ThreadPoolExecutor executor,
                          StatusUpdater statusUpdater,
-                         RocksDBHandler rocksDBHandler) {
+                         RocksDBPollingHandler rocksDBPollingHandler) {
         this.customMessageRepository = customMessageRepository;
         this.processorFactory = processorFactory;
         this.executor = executor;
         this.statusUpdater = statusUpdater;
-        this.rocksDBHandler = rocksDBHandler;
+        this.rocksDBPollingHandler = rocksDBPollingHandler;
     }
 
     public void stop() {
@@ -93,9 +93,10 @@ public class MessagePoller implements Runnable {
 
             log.info("Submitting {} messages", messages.size());
 
-            //TODO : write to rocks db <key : id, value : messages>
             String id = UUID.randomUUID().toString();
-            rocksDBHandler.put(id , gson.toJson(messages));
+
+            //Writing mesages to Rocks DB
+            rocksDBPollingHandler.put(id , gson.toJson(messages));
 
             //Update status to 1 in db2 for all messages
             statusUpdater.markAsSucceeded(messages);

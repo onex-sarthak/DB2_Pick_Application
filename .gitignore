@@ -21,7 +21,7 @@
 /logs/
 
 #Ignore RocksDB data
-/rocksdb-data/
+/rocksdb-polling-data/
 
 # Ignore temporary files
 *.tmp

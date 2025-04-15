@@ -67,6 +67,11 @@ public class CPaaSIntegrationService {
                     requestBody
             ).block();
 
+            if (responseEntity == null) {
+                log.error("ResponseEntity is null. API call failed.");
+                return false;
+            }
+
             log.info("API response received successfully: {}", responseEntity.getBody());
             return true;
         } catch (Exception ex) {

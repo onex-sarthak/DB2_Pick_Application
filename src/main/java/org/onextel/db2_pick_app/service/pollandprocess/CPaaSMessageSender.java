@@ -3,7 +3,7 @@ package org.onextel.db2_pick_app.service.pollandprocess;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
-import org.onextel.db2_pick_app.service.rocksdb.RocksDBHandler;
+import org.onextel.db2_pick_app.service.rocksdb.RocksDBPollingHandler;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.List;
 @Slf4j
 public class CPaaSMessageSender implements MessageSender {
 
-    private final RocksDBHandler rocksDBHandler;
+    private final RocksDBPollingHandler rocksDBPollingHandler;
 
     private final CPaaSIntegrationService cPaaSIntegrationService;
 
@@ -21,7 +21,7 @@ public class CPaaSMessageSender implements MessageSender {
     public boolean sendBatch(List<PendingSmsDto> batch, String id) {
         try {
             boolean result =  Boolean.TRUE.equals(cPaaSIntegrationService.sendMessagesInBatch(batch));
-            rocksDBHandler.delete(id);
+            rocksDBPollingHandler.delete(id);
             return result;
 
         } catch (Exception e) {

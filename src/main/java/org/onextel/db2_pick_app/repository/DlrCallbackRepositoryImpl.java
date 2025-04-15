@@ -1,6 +1,7 @@
 package org.onextel.db2_pick_app.repository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.onextel.db2_pick_app.dto.DlrCallbackRequestDto;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -13,6 +14,7 @@ import java.sql.PreparedStatement;
 
 @Repository
 @RequiredArgsConstructor
+@Slf4j
 public class DlrCallbackRepositoryImpl implements DlrCallbackRepository {
 
     private final JdbcTemplate jdbcTemplate;
@@ -35,6 +37,9 @@ public class DlrCallbackRepositoryImpl implements DlrCallbackRepository {
 
             ps.executeBatch();
             connection.commit();
+        }
+        catch (SQLException e) {
+            log.error("Error updating {} DLR records", batch.size());
         }
     }
 

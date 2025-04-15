@@ -8,12 +8,13 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @Slf4j
-public class RocksDBHandler {
+public class RocksDBPollingHandler {
 
     private RocksDB rocksDB;
 
@@ -21,7 +22,12 @@ public class RocksDBHandler {
     public void init() {
         RocksDB.loadLibrary();
         try(Options options = new Options().setCreateIfMissing(true)) {
-            rocksDB = RocksDB.open(options, "rocksdb-data");
+            File lockFile = new File("rocksdb-polling-data/LOCK");
+            if (lockFile.exists()) {
+                log.warn("Deleting orphaned LOCK file.");
+                lockFile.delete();
+            }
+            rocksDB = RocksDB.open(options, "rocksdb-polling-data");
             log.info("RocksDB initialized successfully.");
         } catch (RocksDBException e) {
             log.error("Error initializing RocksDB", e);
