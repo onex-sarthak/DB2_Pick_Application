@@ -5,8 +5,11 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.Type;
+
+import org.onextel.db2_pick_app.dto.DlrCallbackRequestDto;
 import org.onextel.db2_pick_app.dto.PendingSmsDto;
 import org.onextel.db2_pick_app.repository.CustomMessageRepository;
+import org.onextel.db2_pick_app.service.dlr.DlrCallbackService;
 import org.onextel.db2_pick_app.service.rocksdb.RocksDBPollingHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -29,6 +32,7 @@ public class MessageService {
     private final ExecutorService messagePollingExecutor;
     private final RocksDBPollingHandler rocksDBPollingHandler;
     private final MessageBatchProcessorFactory processorFactory;
+    private final DlrCallbackService dlrCallbackService;
 
 
     @Autowired
@@ -38,7 +42,8 @@ public class MessageService {
             @Qualifier("messageProcessorExecutor") ThreadPoolExecutor messageProcessorExecutor,
             @Qualifier("messagePollingExecutor") ExecutorService messagePollingExecutor,
             RocksDBPollingHandler rocksDBPollingHandler,
-            MessageBatchProcessorFactory processorFactory
+            MessageBatchProcessorFactory processorFactory,
+            DlrCallbackService dlrCallbackService
     ) {
         this.statusUpdater = statusUpdater;
         this.messagePoller = messagePoller;
@@ -46,12 +51,16 @@ public class MessageService {
         this.messagePollingExecutor = messagePollingExecutor;
         this.rocksDBPollingHandler = rocksDBPollingHandler;
         this.processorFactory = processorFactory;
+        this.dlrCallbackService = dlrCallbackService;
     }
 
     @PostConstruct
     public void startPolling() {
-        log.info("Processing messages present in RocksDB");
+        log.info("Processing messages present in rocksdb-polling-data");
         processRocksDBData();
+
+        log.info("Processing messages present in rocksdb-dlr-data");
+        dlrCallbackService.processRocksDBDlrData();
 
         log.info("Starting message polling...");
         messagePollingExecutor.execute(messagePoller);
@@ -91,28 +100,28 @@ public class MessageService {
 
     public void processRocksDBData(){
         // Iterate over RocksDB data
-    List<String> keys = rocksDBPollingHandler.iterate();
-    Gson gson = new Gson();
-    Type listOfPendingSmsDto = new TypeToken<List<PendingSmsDto>>() {}.getType();
+        List<String> keys = rocksDBPollingHandler.iterate();
+        Gson gson = new Gson();
+        Type listOfPendingSmsDto = new TypeToken<List<PendingSmsDto>>() {}.getType();
 
-    for (String key : keys) {
-        try {
-            String serializedMessages = rocksDBPollingHandler.get(key);
-            if (serializedMessages != null) {
-                // Deserialization of messages
-                List<PendingSmsDto> messages = gson.fromJson(serializedMessages, 
-                        listOfPendingSmsDto);
+        for (String key : keys) {
+            try {
+                String serializedMessages = rocksDBPollingHandler.get(key);
+                if (serializedMessages != null) {
+                    // Deserialization of messages
+                    List<PendingSmsDto> messages = gson.fromJson(serializedMessages,
+                            listOfPendingSmsDto);
 
-                log.info("Submitting recovered batch from RocksDB with key: {} and value: {}", key,messages);
+                    log.info("Submitting recovered batch from RocksDB with key: {} and value: {}", key,messages);
 
-                // Submit the recovered batch
-                Runnable task = processorFactory.create(messages, key);
-                messageProcessorExecutor.submit(task);
+                    // Submit the recovered batch
+                    Runnable task = processorFactory.create(messages, key);
+                    messageProcessorExecutor.submit(task);
 
+                }
+            } catch (Exception e) {
+                log.error("Error processing RocksDB entry with key: {}", key, e);
             }
-        } catch (Exception e) {
-            log.error("Error processing RocksDB entry with key: {}", key, e);
         }
-    }
     }
 }

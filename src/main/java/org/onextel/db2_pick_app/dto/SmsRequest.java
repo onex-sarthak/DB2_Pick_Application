@@ -5,16 +5,11 @@ import lombok.*;
 import java.util.List;
 
 @Data
-
-@AllArgsConstructor
-@NoArgsConstructor
 public class SmsRequest {
     private String key;
     private List<SmsDetail> listsms;
 
     @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
     public static class SmsDetail {
         private String from;
         private String to;
